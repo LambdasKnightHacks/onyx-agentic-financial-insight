@@ -1,14 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY
+
+// Debug logging
+if (!supabaseUrl) {
+  console.error('NEXT_PUBLIC_SUPABASE_URL is not defined')
+}
+if (!supabaseAnonKey) {
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined')
+}
+if (!supabaseServiceKey) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY is not defined')
+}
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
 
 // Client for browser/frontend use
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Admin client for server-side operations (bypasses RLS)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
@@ -19,6 +34,29 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 export interface Database {
   public: {
     Tables: {
+      users: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          password: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          password: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          password?: string
+          created_at?: string
+        }
+      }
       accounts: {
         Row: {
           id: string

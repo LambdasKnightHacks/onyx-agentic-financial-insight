@@ -30,10 +30,11 @@ export default function DashboardPage() {
         const alertsData = await alertsRes.json()
         const insightsData = await insightsRes.json()
 
-        setAccounts(accountsData)
-        setRecentTransactions(transactionsData.slice(0, 5))
-        setAlerts(alertsData.slice(0, 3))
-        setInsights(insightsData.slice(0, 3))
+        // Handle error responses
+        setAccounts(Array.isArray(accountsData) ? accountsData : [])
+        setRecentTransactions(Array.isArray(transactionsData) ? transactionsData.slice(0, 5) : [])
+        setAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 3) : [])
+        setInsights(Array.isArray(insightsData) ? insightsData.slice(0, 3) : [])
       } catch (error) {
         console.error("Failed to fetch overview data:", error)
       } finally {

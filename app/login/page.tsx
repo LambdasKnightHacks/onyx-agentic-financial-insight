@@ -10,16 +10,48 @@ import { Card } from "@/components/ui/card"
 import { Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { setUser } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Mock authentication - in production, this would call an API
-    router.push("/dashboard")
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'An error occurred')
+        return
+      }
+
+      // Set user in context and redirect to dashboard
+      setUser(data.user)
+      router.push("/dashboard")
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,6 +69,11 @@ export default function LoginPage() {
         </div>
 
         <Card className="p-8">
+          {error && (
+            <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -67,8 +104,8 @@ export default function LoginPage() {
               />
             </div>
 
-            <Button type="submit" className="w-full" size="lg">
-              Log In
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? "Logging in..." : "Log In"}
             </Button>
           </form>
         </Card>
