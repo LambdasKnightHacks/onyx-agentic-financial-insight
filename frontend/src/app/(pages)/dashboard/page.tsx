@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 import type { Account, Transaction, FraudAlert } from "@/src/lib/types";
 import { PlaidLinkButton } from "@/src/components/plaid-link-button";
+import { useAuth } from "@/src/components/auth-context";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
@@ -80,10 +82,28 @@ export default function DashboardPage() {
     );
   }
 
+  // Get display name from user
+  const getUserName = () => {
+    if (!user) return "";
+    const metadata = user.user_metadata;
+    if (metadata?.name) return metadata.name;
+    if (metadata?.full_name) return metadata.full_name;
+    if (metadata?.first_name) return metadata.first_name;
+    
+    // Fall back to email if no defined name
+    if (user.email) {
+      return user.email.split("@")[0];
+    }
+    
+    return "";
+  };
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Welcome back{getUserName() ? `, ${getUserName()}` : ""}
+        </h1>
         <p className="text-muted-foreground mt-2">
           Here's a calm overview of your finances
         </p>
