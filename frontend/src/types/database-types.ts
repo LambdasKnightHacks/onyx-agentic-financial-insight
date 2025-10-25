@@ -12,11 +12,17 @@ export interface SupabaseAccount {
   name: string
   type: string | null
   currency: string
-  last4: string | null
+  display_mask: string | null
   created_at: string
   institution: string | null
-  balance_current: number
-  balance_available: number
+  plaid_item_id: string | null
+  plaid_account_id: string | null
+  source: string
+  account_balances?: {
+    current: number | null
+    available: number | null
+    as_of: string
+  }[]
 }
 
 // Frontend Account interface (compatible with your existing UI)
@@ -143,15 +149,18 @@ export interface FraudAlert {
 
 // Utility functions to transform Supabase data to frontend format
 export function transformSupabaseAccountToAccount(supabaseAccount: SupabaseAccount): Account {
+  // Get the most recent balance
+  const latestBalance = supabaseAccount.account_balances?.[0]
+  
   return {
     id: supabaseAccount.id,
     institution: supabaseAccount.institution || 'Unknown',
     nickname: supabaseAccount.name,
-    last4: supabaseAccount.last4 || '****',
+    last4: supabaseAccount.display_mask || '****',
     type: (supabaseAccount.type as AccountType) || 'checking',
     currency: 'USD',
-    balanceCurrent: supabaseAccount.balance_current == null ? 0 : Number(supabaseAccount.balance_current),
-    balanceAvailable: supabaseAccount.balance_available == null ? undefined : Number(supabaseAccount.balance_available),
+    balanceCurrent: latestBalance?.current || 0,
+    balanceAvailable: latestBalance?.available || latestBalance?.current || 0,
     status: 'active' // Default status
   }
 }

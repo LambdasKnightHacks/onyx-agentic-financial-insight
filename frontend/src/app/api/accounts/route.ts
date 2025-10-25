@@ -12,8 +12,15 @@ export async function GET(request: NextRequest) {
     }
     
     const { data: accounts, error } = await supabaseAdmin
-      .from('ui_accounts')
-      .select('*')
+      .from('accounts')
+      .select(`
+        *,
+        account_balances(
+          current,
+          available,
+          as_of
+        )
+      `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
@@ -90,28 +97,17 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    const { data: fullAccount, error: viewError } = await supabaseAdmin
-      .from('ui_accounts')
-      .select('*')
-      .eq('id', account.id)
-      .single()
-
-    if (viewError || !fullAccount) {
-      console.error('Error fetching created account from view:', viewError)
-      return NextResponse.json({
-        id: account.id,
-        institution: account.institution,
-        nickname: account.name,
-        last4: account.display_mask || '****',
-        type: account.type,
-        currency: 'USD',
-        balanceCurrent: balanceCurrent || 0,
-        balanceAvailable: balanceAvailable !== undefined ? balanceAvailable : balanceCurrent || 0,
-        status: 'active',
-      }, { status: 201 })
+    // Return the created account with balance data
+    const accountWithBalance = {
+      ...account,
+      account_balances: [{
+        current: balanceCurrent || 0,
+        available: balanceAvailable !== undefined ? balanceAvailable : balanceCurrent || 0,
+        as_of: new Date().toISOString()
+      }]
     }
 
-    const transformedAccount = transformSupabaseAccountToAccount(fullAccount)
+    const transformedAccount = transformSupabaseAccountToAccount(accountWithBalance)
 
     return NextResponse.json(transformedAccount, { status: 201 })
   } catch (error) {
