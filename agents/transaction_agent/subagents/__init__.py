@@ -7,6 +7,8 @@ from .budget_agent import budget_agent
 from .cashflow_agent import cashflow_agent
 from .reducer_agent import reducer_agent
 from .synthesizer_agent import synthesizer_agent
+from .consensus_agent import consensus_agent
+from .database_agent import database_agent
 
 __all__ = [
     "init_agent",
@@ -16,4 +18,6 @@ __all__ = [
     "cashflow_agent",
     "reducer_agent",
     "synthesizer_agent",
+    "consensus_agent",
+    "database_agent",
 ]

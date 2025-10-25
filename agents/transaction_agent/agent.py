@@ -8,10 +8,10 @@ from .subagents import (
     fraud_agent,
     budget_agent,
     cashflow_agent,
-    # reducer_agent,
-    # synthesizer_agent,
-    # database_agent
-    # a2a_communication_agent
+    reducer_agent,
+    synthesizer_agent,
+    consensus_agent,
+    database_agent
 )
 
 
@@ -32,9 +32,9 @@ root_agent = SequentialAgent(
     sub_agents=[
         init_agent,
         parallel_analysis_agent,
-        # reducer_agent,
-        # synthesizer_agent,
-        # database_agent
-        # a2a_communication_agent
+        consensus_agent,
+        reducer_agent,
+        synthesizer_agent,
+        database_agent
     ],
 )
