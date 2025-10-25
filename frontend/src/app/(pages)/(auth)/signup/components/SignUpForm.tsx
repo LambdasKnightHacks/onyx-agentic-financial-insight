@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/src/components/ui/button"
 import { Input } from "@/src/components/ui/input"
@@ -9,47 +8,20 @@ import { Label } from "@/src/components/ui/label"
 import { Card } from "@/src/components/ui/card"
 import { Sparkles } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/src/components/auth-context"
+import { signup } from "@/src/lib/auth-actions"
 
-export default function LoginPage() {
-  const router = useRouter()
-  const { setUser } = useAuth()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+export default function SignUpForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (formData: FormData) => {
     setLoading(true)
     setError("")
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'An error occurred')
-        return
-      }
-
-      // Set user in context and redirect to dashboard
-      setUser(data.user)
-      router.push("/dashboard")
+      await signup(formData)
     } catch (err) {
       setError("An unexpected error occurred")
-    } finally {
       setLoading(false)
     }
   }
@@ -64,8 +36,8 @@ export default function LoginPage() {
             </div>
             <span className="text-2xl font-bold">MyFinance</span>
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-muted-foreground mt-2">Log in to your account to continue</p>
+          <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
+          <p className="text-muted-foreground mt-2">Get started with MyFinance today</p>
         </div>
 
         <Card className="p-8">
@@ -74,46 +46,63 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form action={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="first-name">First Name</Label>
+              <Input
+                id="first-name"
+                name="first-name"
+                type="text"
+                placeholder="John"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="last-name">Last Name</Label>
+              <Input
+                id="last-name"
+                name="last-name"
+                type="text"
+                placeholder="Doe"
+                required
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </a>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={8}
               />
+              <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "Logging in..." : "Log In"}
+              {loading ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link href="/signup" className="text-primary hover:underline font-medium">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="text-primary hover:underline font-medium">
+            Log in
           </Link>
         </p>
       </div>

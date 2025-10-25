@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/src/lib/supabase"
 import { transformSupabaseAccountToAccount } from "@/src/types/database-types"
-import { getUserIdFromRequest } from "@/src/app/api/auth/auth"
+import { getUserIdFromRequest } from "@/src/lib/auth-utils"
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 })
     }
 
-    // Transform Supabase data to frontend format
     const transformedAccounts = accounts?.map(transformSupabaseAccountToAccount) || []
 
     return NextResponse.json(transformedAccounts)
