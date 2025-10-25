@@ -22,6 +22,7 @@ from google.genai import Client
 from .tools import calculate_runway_days, forecast_balance
 from .prompt import CASHFLOW_ANALYSIS_PROMPT
 from ...utils.json_parser import parse_json_response
+from ...a2a import a2a_client, CashflowAgentMessageHandler
 
 
 class CashflowAgent(BaseAgent):
@@ -34,7 +35,14 @@ class CashflowAgent(BaseAgent):
     """
 
     def __init__(self):
-        super().__init__(name="cashflow_agent")
+        super().__init__(
+            name="cashflow_agent",
+            description="Forecasts cashflow and provides scenario analysis via A2A"
+        )
+        
+        # Initialize A2A communication
+        self._a2a_handler = CashflowAgentMessageHandler()
+        a2a_client.register_message_handler("cashflow_agent", self._a2a_handler)
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         """Execute cashflow forecasting with proper state management."""

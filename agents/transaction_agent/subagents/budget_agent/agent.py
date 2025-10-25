@@ -20,6 +20,7 @@ from google.genai import Client
 
 from .prompt import BUDGET_ANALYSIS_PROMPT
 from ...utils.json_parser import parse_json_response
+from ...a2a import a2a_client, BudgetAgentMessageHandler
 
 
 class BudgetAgent(BaseAgent):
@@ -32,7 +33,14 @@ class BudgetAgent(BaseAgent):
     """
 
     def __init__(self):
-        super().__init__(name="budget_agent")
+        super().__init__(
+            name="budget_agent",
+            description="Analyzes budget compliance and requests cashflow scenarios via A2A"
+        )
+        
+        # Initialize A2A communication
+        self._a2a_handler = BudgetAgentMessageHandler()
+        a2a_client.register_message_handler("budget_agent", self._a2a_handler)
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         """Execute budget coaching with proper state management."""
@@ -106,7 +114,38 @@ class BudgetAgent(BaseAgent):
                 if "tips" not in result_dict:
                     result_dict["tips"] = []
                 
-                # Step 6: Write structured output to state
+                # Step 6: A2A Communication - Scenario Planning
+                if result_dict.get("over_budget"):
+                    budget_excess = result_dict.get("budget_percentage", 0) - 100
+                    if budget_excess > 0:
+                        scenario_request = {
+                            "type": "spending_reduction_scenario",
+                            "scenario_type": "spending_reduction_scenario",
+                            "current_spending": amount,
+                            "proposed_reduction": budget_excess,
+                            "category": category,
+                            "timeframe": "30_days"
+                        }
+                        
+                        # Send A2A message to cashflow agent
+                        scenario_result = await a2a_client.send_message(
+                            from_agent="budget_agent",
+                            to_agent="cashflow_agent",
+                            message=scenario_request
+                        )
+                        
+                        if scenario_result:
+                            result_dict["a2a_scenarios"] = {
+                                "cashflow_impact": scenario_result,
+                                "scenario_requested": True
+                            }
+                            # Add scenario-based tip
+                            if scenario_result.get("runway_extension", 0) > 0:
+                                result_dict["tips"].append(
+                                    f"Reducing {category} spending by ${budget_excess:.2f} could extend your runway by {scenario_result.get('runway_extension', 0)} days"
+                                )
+                
+                # Step 7: Write structured output to state
                 yield Event(
                     author=self.name,
                     content=Content(parts=[Part(text=f"Budget analysis complete: {'Over budget' if result_dict.get('over_budget') else 'Within budget'}, {len(result_dict.get('tips', []))} tips provided")]),

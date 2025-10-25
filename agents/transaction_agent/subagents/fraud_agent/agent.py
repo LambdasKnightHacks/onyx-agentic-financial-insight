@@ -21,6 +21,7 @@ from google.genai import Client
 from .tools import calculate_z_score, check_geo_anomaly, check_velocity
 from .prompt import FRAUD_ANALYSIS_PROMPT
 from ...utils.json_parser import parse_json_response
+from ...a2a import a2a_client, FraudAgentMessageHandler
 
 
 class FraudAgent(BaseAgent):
@@ -33,7 +34,14 @@ class FraudAgent(BaseAgent):
     """
 
     def __init__(self):
-        super().__init__(name="fraud_agent")
+        super().__init__(
+            name="fraud_agent",
+            description="Detects fraudulent transactions using statistical analysis and A2A verification"
+        )
+        
+        # Initialize A2A communication
+        self._a2a_handler = FraudAgentMessageHandler()
+        a2a_client.register_message_handler("fraud_agent", self._a2a_handler)
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         """Execute fraud detection with proper state management."""
@@ -139,7 +147,47 @@ class FraudAgent(BaseAgent):
                 if "fraud_score" not in result_dict:
                     result_dict["fraud_score"] = 0.0
                 
-                # Step 6: Write structured output to state
+                # Step 6: A2A Communication - Merchant Verification
+                fraud_score = result_dict.get("fraud_score", 0.0)
+                if fraud_score > 0.7 and merchant_name.lower() not in ["starbucks", "mcdonalds", "amazon", "shell"]:
+                    # High fraud score with unknown merchant - request verification
+                    verification_request = {
+                        "type": "merchant_verification",
+                        "merchant": merchant_name,
+                        "amount": amount,
+                        "context": "fraud_suspicious",
+                        "fraud_indicators": result_dict.get("alerts", []),
+                        "fraud_score": fraud_score
+                    }
+                    
+                    # Send A2A message to categorization agent
+                    verification_result = await a2a_client.send_message(
+                        from_agent="fraud_agent",
+                        to_agent="categorization_agent", 
+                        message=verification_request
+                    )
+                    
+                    if verification_result and verification_result.get("merchant_verified"):
+                        # Merchant verified - reduce fraud score
+                        categorization_confidence = verification_result.get("confidence", 0.0)
+                        if categorization_confidence > 0.8:
+                            result_dict["fraud_score"] = max(0.0, fraud_score - 0.3)  # Reduce by 0.3
+                            result_dict["alerts"].append("merchant_verified_by_categorization")
+                            result_dict["a2a_verification"] = {
+                                "verified": True,
+                                "confidence": categorization_confidence,
+                                "original_score": fraud_score,
+                                "adjusted_score": result_dict["fraud_score"]
+                            }
+                    else:
+                        # Merchant not verified - keep high fraud score
+                        result_dict["a2a_verification"] = {
+                            "verified": False,
+                            "confidence": verification_result.get("confidence", 0.0) if verification_result else 0.0,
+                            "reason": "merchant_not_verified"
+                        }
+                
+                # Step 7: Write structured output to state
                 yield Event(
                     author=self.name,
                     content=Content(parts=[Part(text=f"Fraud analysis complete: score {result_dict.get('fraud_score', 0):.2f}, {len(result_dict.get('alerts', []))} alerts")]),

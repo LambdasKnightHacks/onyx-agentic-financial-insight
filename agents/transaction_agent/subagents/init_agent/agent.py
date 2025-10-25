@@ -67,7 +67,9 @@ class InitAgent(BaseAgent):
             
             # Step 1: Check for transaction deduplication
             plaid_transaction_id = incoming_transaction.get("plaid_transaction_id")
-            if plaid_transaction_id:
+            is_test_transaction = incoming_transaction.get("is_test_transaction", False)
+            
+            if plaid_transaction_id and not is_test_transaction:
                 exists_result = check_transaction_exists(plaid_transaction_id)
                 if exists_result.get("status") == "success" and exists_result.get("exists"):
                     yield Event(
@@ -93,9 +95,10 @@ class InitAgent(BaseAgent):
                     author=self.name,
                     content=Content(parts=[Part(text=f"Failed to create agent run: {create_result.get('error')}")])
                 )
-                return
-
-            # Step 3: Load user context data
+                # Continue with analysis but without run_id for database persistence
+                run_id = None
+            else:
+                run_id = create_result.get("run_id")
             # Load user's custom category rules
             rules_result = fetch_user_category_rules(user_id)
             user_rules = rules_result.get("data", []) if rules_result.get("status") == "success" else []

@@ -17,6 +17,7 @@ from google.genai import Client
 
 from .prompt import CATEGORIZATION_PROMPT
 from ...utils.json_parser import parse_json_response
+from ...a2a import a2a_client, CategorizationAgentMessageHandler
 
 
 class CategorizationAgent(BaseAgent):
@@ -29,7 +30,14 @@ class CategorizationAgent(BaseAgent):
     """
 
     def __init__(self):
-        super().__init__(name="categorization_agent")
+        super().__init__(
+            name="categorization_agent",
+            description="Categorizes transactions and provides merchant verification via A2A"
+        )
+        
+        # Initialize A2A communication
+        self._a2a_handler = CategorizationAgentMessageHandler()
+        a2a_client.register_message_handler("categorization_agent", self._a2a_handler)
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         """Execute categorization with proper state management."""
