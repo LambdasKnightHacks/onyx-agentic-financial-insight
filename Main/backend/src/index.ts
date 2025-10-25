@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-
+require("dotenv").config();
 import plaidRoutes from "./routes/plaidRoutes";
 
 // Load environment variables
