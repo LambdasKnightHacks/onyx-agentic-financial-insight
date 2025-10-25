@@ -13,6 +13,6 @@ router.post("/auth", plaidController.getAuthData);
 router.post("/connect-bank", plaidController.connectBank);
 router.post("/webhook", plaidController.webhook);
 router.get("/status", plaidController.getStatus);
-router.post("/sync-transactions", plaidController.syncTransactions);
+router.post("/sync", plaidController.syncTransactions);
 
 export default router;

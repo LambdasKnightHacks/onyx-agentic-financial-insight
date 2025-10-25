@@ -213,6 +213,70 @@ class PlaidService {
     };
     return await this.client.transactionsSync(request);
   }
+
+  async saveAccounts(
+    userId: string,
+    itemId: string,
+    accounts: any[]
+  ): Promise<PlaidAccount[]> {
+    try {
+      const savedAccounts: PlaidAccount[] = [];
+
+      for (const account of accounts) {
+        const accountData = {
+          user_id: userId,
+          name: account.name,
+          type: account.type,
+          subtype: account.subtype,
+          currency: account.balances.iso_currency_code || "USD",
+          display_mask: account.mask,
+          institution: account.official_name || account.name,
+          plaid_account_id: account.account_id,
+          plaid_item_id: itemId,
+          source: "plaid" as const,
+        };
+
+        const { data, error } = await supabase
+          .from("accounts")
+          .upsert(accountData, {
+            onConflict: "plaid_account_id",
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error saving account:", error);
+        } else if (data) {
+          savedAccounts.push(data as PlaidAccount);
+        }
+      }
+
+      return savedAccounts;
+    } catch (error) {
+      console.error("Error saving accounts:", error);
+      throw error;
+    }
+  }
+
+  async resetItemStatus(itemId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from("plaid_items")
+        .update({
+          status: "active",
+          error_code: null,
+          error_message: null,
+        })
+        .eq("item_id", itemId);
+
+      if (error) {
+        throw new Error(`Failed to reset item status: ${error.message}`);
+      }
+    } catch (error) {
+      console.error("Error resetting item status:", error);
+      throw error;
+    }
+  }
 }
 
 export default new PlaidService();
