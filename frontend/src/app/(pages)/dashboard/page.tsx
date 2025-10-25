@@ -99,29 +99,42 @@ export default function DashboardPage() {
 
       <div>
         <h2 className="text-xl font-semibold mb-4">Your Accounts</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {accounts.map((account) => (
-            <Card key={account.id} className="p-5">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{account.institution}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">••••{account.last4}</p>
+        {accounts.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Banknote className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No accounts yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Get started by adding your first account to track your finances
+            </p>
+            <Button asChild>
+              <a href="/dashboard/settings">Add Account</a>
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {accounts.map((account) => (
+              <Card key={account.id} className="p-5">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{account.institution}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">••••{account.last4}</p>
+                    </div>
+                    <Badge variant={account.status === "active" ? "default" : "secondary"} className="text-xs">
+                      {account.type}
+                    </Badge>
                   </div>
-                  <Badge variant={account.status === "active" ? "default" : "secondary"} className="text-xs">
-                    {account.type}
-                  </Badge>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      ${Math.abs(account.balanceCurrent).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{account.nickname}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    ${Math.abs(account.balanceCurrent).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{account.nickname}</p>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
