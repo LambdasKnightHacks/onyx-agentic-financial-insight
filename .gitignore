@@ -1,1 +1,14 @@
+refs/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
 .env
+*.log
+.DS_Store
+.vscode/
+
+agents/test_init_agent_simple.py
