@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/src/components/ui/sheet"
 import { Progress } from "@/src/components/ui/progress"
 import { Search, ArrowUpRight, ArrowDownRight, MapPin, CreditCard, AlertTriangle } from "lucide-react"
+import { AddTransactionDialog } from "@/src/components/add-transaction"
 import type { Transaction, Account } from "@/src/lib/types"
 
 export default function TransactionsPage() {
@@ -21,24 +22,25 @@ export default function TransactionsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [txnRes, accRes] = await Promise.all([fetch("/api/transactions"), fetch("/api/accounts")])
-        const txnData = await txnRes.json()
-        const accData = await accRes.json()
-        
-        console.log("Transactions loaded:", txnData?.length || 0, txnData)
-        console.log("Accounts loaded:", accData?.length || 0, accData)
-        
-        setTransactions(Array.isArray(txnData) ? txnData : [])
-        setAccounts(Array.isArray(accData) ? accData : [])
-      } catch (error) {
-        console.error("Failed to fetch data:", error)
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = async () => {
+    try {
+      const [txnRes, accRes] = await Promise.all([fetch("/api/transactions"), fetch("/api/accounts")])
+      const txnData = await txnRes.json()
+      const accData = await accRes.json()
+      
+      console.log("Transactions loaded:", txnData?.length || 0, txnData)
+      console.log("Accounts loaded:", accData?.length || 0, accData)
+      
+      setTransactions(Array.isArray(txnData) ? txnData : [])
+      setAccounts(Array.isArray(accData) ? accData : [])
+    } catch (error) {
+      console.error("Failed to fetch data:", error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchData()
   }, [])
 
@@ -84,12 +86,15 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-        <p className="text-muted-foreground mt-1">View and manage all your recent transactions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
+          <p className="text-muted-foreground mt-1">View and manage all your recent transactions</p>
+        </div>
+        <AddTransactionDialog accounts={accounts} onTransactionAdded={fetchData} />
       </div>
 
-      {/* Filters */}
+      
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -132,7 +137,7 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
 
-      {/* Transactions grouped by account */}
+      
       <div className="space-y-6">
         {Object.entries(groupedTransactions).map(([accountId, txns]) => {
           const account = getAccountById(accountId)
@@ -190,8 +195,8 @@ export default function TransactionsPage() {
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <p className={`font-semibold ${txn.amount > 0 ? "text-green-500" : "text-foreground"}`}>
-                          {txn.amount > 0 ? "+" : ""}${Math.abs(txn.amount).toFixed(2)}
+                        <p className={`font-semibold ${txn.amount > 0 ? "text-green-500" : "text-red-500"}`}>
+                          {txn.amount > 0 ? "+" : "-"}${Math.abs(txn.amount).toFixed(2)}
                         </p>
                         <Badge variant="outline" className="text-xs mt-1">
                           {txn.status}
@@ -214,7 +219,7 @@ export default function TransactionsPage() {
         </Card>
       )}
 
-      {/* Transaction Details Drawer */}
+      {/* Transaction Details*/}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {selectedTransaction && (
