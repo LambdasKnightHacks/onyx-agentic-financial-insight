@@ -35,6 +35,7 @@ export interface PlaidAccount {
   user_id: string;
   name: string;
   type: string | null;
+  subtype?: string | null;
   currency: string;
   display_mask: string | null;
   institution: string | null;
