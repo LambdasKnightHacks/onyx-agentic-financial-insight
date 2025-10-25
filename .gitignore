@@ -11,4 +11,4 @@ venv/
 .DS_Store
 .vscode/
 
-agents/test_init_agent_simple.py
+agents/testing/*

@@ -1,9 +1,22 @@
-""" init_agent: Handles deduplication, run registration,  and context packaging """
+"""
+Transaction Analysis Initialization Agent
+
+Handles the initial setup and context preparation for transaction analysis.
+Performs critical preprocessing tasks:
+- Checks for transaction deduplication to avoid duplicate processing
+- Creates agent run records in Supabase for tracking and audit trails
+- Loads user-specific context data (category rules, recent transactions, accounts)
+- Calculates baseline spending statistics for comparison
+- Packages all context data into session state for downstream agents
+
+Essential first step that ensures data integrity and provides necessary context
+for all subsequent analysis agents in the pipeline.
+"""
 
 from typing import AsyncGenerator
 import uuid
 from google.adk.agents import BaseAgent, InvocationContext
-from google.adk.events import Event
+from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
 from ...tools.database import (
     check_transaction_exists,
@@ -96,40 +109,38 @@ class InitAgent(BaseAgent):
             user_accounts = accounts_result.get("data", []) if accounts_result.get("status") == "success" else []
             
             # Step 4: Package context for downstream agents
-            ctx.session.state.update({
-                "run_id": run_id,
-                "user_rules": user_rules,
-                "baseline_transactions": baseline_transactions,
-                "user_accounts": user_accounts,
-                "init_complete": True,
-                "skip_analysis": False
-            })
-            
             # Calculate some quick stats for context
             total_baseline_amount = sum(float(tx.get("amount", 0)) for tx in baseline_transactions)
             avg_daily_spend = total_baseline_amount / 30 if baseline_transactions else 0
             
-            ctx.session.state.update({
-                "baseline_stats": {
-                    "total_amount_30d": total_baseline_amount,
-                    "avg_daily_spend": avg_daily_spend,
-                    "transaction_count": len(baseline_transactions)
-                }
-            })
-            
+            # Yield event with state updates via EventActions
             yield Event(
                 author=self.name,
-                content=Content(parts=[Part(text=f"Initialization complete. Run ID: {run_id}. Loaded {len(user_rules)} rules, {len(baseline_transactions)} baseline transactions, {len(user_accounts)} accounts.")])
+                content=Content(parts=[Part(text=f"Initialization complete. Run ID: {run_id}. Loaded {len(user_rules)} rules, {len(baseline_transactions)} baseline transactions, {len(user_accounts)} accounts.")]),
+                actions=EventActions(state_delta={
+                    "run_id": run_id,
+                    "user_rules": user_rules,
+                    "baseline_transactions": baseline_transactions,
+                    "user_accounts": user_accounts,
+                    "init_complete": True,
+                    "skip_analysis": False,
+                    "baseline_stats": {
+                        "total_amount_30d": total_baseline_amount,
+                        "avg_daily_spend": avg_daily_spend,
+                        "transaction_count": len(baseline_transactions)
+                    }
+                })
             )
             
         except Exception as e:
             yield Event(
                 author=self.name,
-                content=Content(parts=[Part(text=f"Initialization failed: {str(e)}")])
+                content=Content(parts=[Part(text=f"Initialization failed: {str(e)}")]),
+                actions=EventActions(state_delta={
+                    "init_error": str(e),
+                    "skip_analysis": True
+                })
             )
-            # Set error state
-            ctx.session.state["init_error"] = str(e)
-            ctx.session.state["skip_analysis"] = True
 
 # Create the agent instance
 init_agent = InitAgent()
