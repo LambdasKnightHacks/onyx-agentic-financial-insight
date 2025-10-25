@@ -1,15 +1,17 @@
-const plaidService = require("../services/plaidService");
+import { Request, Response } from "express";
+import plaidService from "../services/plaidService";
 
-class PlaidController {
+class plaidController {
   // Create link token for Plaid Link initialization
-  async createLinkToken(req, res) {
+  async createLinkToken(req: Request, res: Response): Promise<void> {
     try {
       const { userId } = req.body;
 
       if (!userId) {
-        return res.status(400).json({
+        res.status(400).json({
           error: "userId is required",
         });
+        return;
       }
 
       const response = await plaidService.createLinkToken(userId);
@@ -18,7 +20,7 @@ class PlaidController {
         link_token: response.data.link_token,
         expiration: response.data.expiration,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating link token:", error);
       res.status(500).json({
         error: "Failed to create link token",
@@ -28,14 +30,15 @@ class PlaidController {
   }
 
   // Exchange public token for access token
-  async exchangeToken(req, res) {
+  async exchangeToken(req: Request, res: Response): Promise<void> {
     try {
       const { public_token } = req.body;
 
       if (!public_token) {
-        return res.status(400).json({
+        res.status(400).json({
           error: "public_token is required",
         });
+        return;
       }
 
       const response = await plaidService.exchangeToken(public_token);
@@ -44,7 +47,7 @@ class PlaidController {
         access_token: response.data.access_token,
         item_id: response.data.item_id,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error exchanging token:", error);
       res.status(500).json({
         error: "Failed to exchange token",
@@ -54,14 +57,15 @@ class PlaidController {
   }
 
   // Get account information
-  async getAccounts(req, res) {
+  async getAccounts(req: Request, res: Response): Promise<void> {
     try {
       const { access_token } = req.body;
 
       if (!access_token) {
-        return res.status(400).json({
+        res.status(400).json({
           error: "access_token is required",
         });
+        return;
       }
 
       const response = await plaidService.getAccounts(access_token);
@@ -70,7 +74,7 @@ class PlaidController {
         accounts: response.data.accounts,
         item: response.data.item,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error getting accounts:", error);
       res.status(500).json({
         error: "Failed to get accounts",
@@ -80,14 +84,15 @@ class PlaidController {
   }
 
   // Get auth data (routing/account numbers)
-  async getAuthData(req, res) {
+  async getAuthData(req: Request, res: Response): Promise<void> {
     try {
       const { access_token } = req.body;
 
       if (!access_token) {
-        return res.status(400).json({
+        res.status(400).json({
           error: "access_token is required",
         });
+        return;
       }
 
       const response = await plaidService.getAuthData(access_token);
@@ -97,7 +102,7 @@ class PlaidController {
         numbers: response.data.numbers,
         item: response.data.item,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error getting auth data:", error);
       res.status(500).json({
         error: "Failed to get auth data",
@@ -107,4 +112,4 @@ class PlaidController {
   }
 }
 
-module.exports = new PlaidController();
+export default new plaidController();

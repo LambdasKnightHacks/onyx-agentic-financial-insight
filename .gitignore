@@ -1,8 +1,10 @@
-<<<<<<< HEAD
+# Node / Next.js
 node_modules/
-.env
+.pnpm-store/
+.next/
+dist/
+out/
+coverage/
 *.log
+.env*
 .DS_Store
-=======
-.env
->>>>>>> 83a75f5c6e92ffee55dcd568130038332f8649ce
