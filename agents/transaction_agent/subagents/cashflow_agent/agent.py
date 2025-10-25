@@ -17,12 +17,12 @@ from typing import AsyncGenerator
 from google.adk.agents import BaseAgent, InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
-from google.genai import Client
 
 from .tools import calculate_runway_days, forecast_balance
 from .prompt import CASHFLOW_ANALYSIS_PROMPT
 from ...utils.json_parser import parse_json_response
 from ...a2a import a2a_client, CashflowAgentMessageHandler
+from ...config import get_llm_client, LLM_MODEL
 
 
 class CashflowAgent(BaseAgent):
@@ -48,9 +48,8 @@ class CashflowAgent(BaseAgent):
         """Execute cashflow forecasting with proper state management."""
         
         try:
-            # Initialize LLM client
-            client = Client()
-            model = "gemini-2.5-flash"
+            # Use shared LLM client for efficiency
+            client = get_llm_client()
             
             # Step 1: Read from session state
             transaction = ctx.session.state.get("incoming_transaction", {})
@@ -111,9 +110,9 @@ class CashflowAgent(BaseAgent):
                 forecast_30d=forecast_30d.get("forecasted_balance", 0)
             )
 
-            # Step 4: Call LLM directly
+            # Step 4: Call LLM directly with optimized model
             response = await client.aio.models.generate_content(
-                model=model,
+                model=LLM_MODEL,
                 contents=prompt
             )
             

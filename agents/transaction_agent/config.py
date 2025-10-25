@@ -1,15 +1,35 @@
 """Configuration and constants for the transaction analysis pipeline."""
 
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
+from datetime import datetime, timedelta
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
+# Simple in-memory cache for user context data
+_user_context_cache: Dict[str, Dict[str, Any]] = {}
+_cache_ttl_seconds = 300  # 5 minutes
+
 # Google ADK 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+
+# Shared LLM Client (singleton pattern for efficiency)
+_llm_client = None
+
+def get_llm_client():
+    """Get shared LLM client instance for all agents."""
+    global _llm_client
+    if _llm_client is None:
+        from google.genai import Client
+        _llm_client = Client()
+    return _llm_client
+
+# LLM Configuration
+LLM_MODEL = "gemini-2.5-flash-lite"  # Using fast, stable, widely-available model
+LLM_TIMEOUT = 10  # seconds
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -90,6 +110,29 @@ def validate_config() -> bool:
         return False
     
     return True
+
+def get_cached_user_context(user_id: str) -> Optional[Dict[str, Any]]:
+    """Get cached user context if available and not expired."""
+    if user_id in _user_context_cache:
+        cache_entry = _user_context_cache[user_id]
+        cache_time = cache_entry.get("cached_at")
+        if cache_time and (datetime.now() - cache_time).total_seconds() < _cache_ttl_seconds:
+            return cache_entry.get("data")
+    return None
+
+def set_cached_user_context(user_id: str, data: Dict[str, Any]):
+    """Cache user context data."""
+    _user_context_cache[user_id] = {
+        "data": data,
+        "cached_at": datetime.now()
+    }
+
+def clear_user_cache(user_id: str = None):
+    """Clear cache for specific user or all users."""
+    if user_id:
+        _user_context_cache.pop(user_id, None)
+    else:
+        _user_context_cache.clear()
 
 # Validate config on import
 if not validate_config():

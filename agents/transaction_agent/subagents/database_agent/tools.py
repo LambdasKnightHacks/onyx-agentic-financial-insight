@@ -6,8 +6,13 @@ Handles updates to transactions, insights, alerts, and agent_runs tables.
 """
 
 from typing import Dict, Any, List, Optional
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from ...config import get_supabase_client, TABLES
+
+# Thread pool for parallel database writes
+_db_write_executor = ThreadPoolExecutor(max_workers=5)
 
 
 def update_transaction_with_analysis(
@@ -328,6 +333,7 @@ def persist_analysis_results(
 ) -> Dict[str, Any]:
     """
     Main function to persist all analysis results to the database.
+    Uses asyncio to run operations in parallel for maximum performance.
     
     Args:
         user_id: User UUID
@@ -356,34 +362,54 @@ def persist_analysis_results(
             results["errors"].append("Transaction not found in database")
             return results
         
-        # Update transaction with analysis results
-        tx_update = update_transaction_with_analysis(transaction_id, analysis_results)
-        if tx_update["status"] == "success":
-            results["transaction_updated"] = tx_update["updated"]
-        else:
-            results["errors"].append(f"Transaction update failed: {tx_update['error']}")
+        # Run all database operations in parallel using asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            tx_update, insight_result, alerts_result, run_update = loop.run_until_complete(
+                asyncio.gather(
+                    loop.run_in_executor(_db_write_executor, update_transaction_with_analysis, transaction_id, analysis_results),
+                    loop.run_in_executor(_db_write_executor, create_insight_record, user_id, run_id, final_insight),
+                    loop.run_in_executor(_db_write_executor, create_alerts_from_analysis, user_id, transaction_id, analysis_results),
+                    loop.run_in_executor(_db_write_executor, update_agent_run_completion, run_id, timings),
+                    return_exceptions=True
+                )
+            )
+        finally:
+            loop.close()
         
-        # Create insight record
-        insight_result = create_insight_record(user_id, run_id, final_insight)
-        if insight_result["status"] == "success":
+        # Process transaction update result
+        if isinstance(tx_update, dict) and tx_update.get("status") == "success":
+            results["transaction_updated"] = tx_update.get("updated", False)
+        elif isinstance(tx_update, Exception):
+            results["errors"].append(f"Transaction update failed: {str(tx_update)}")
+        else:
+            results["errors"].append(f"Transaction update failed: {tx_update.get('error', 'Unknown error')}")
+        
+        # Process insight creation result
+        if isinstance(insight_result, dict) and insight_result.get("status") == "success":
             results["insight_created"] = True
-            results["insight_id"] = insight_result["insight_id"]
+            results["insight_id"] = insight_result.get("insight_id")
+        elif isinstance(insight_result, Exception):
+            results["errors"].append(f"Insight creation failed: {str(insight_result)}")
         else:
-            results["errors"].append(f"Insight creation failed: {insight_result['error']}")
+            results["errors"].append(f"Insight creation failed: {insight_result.get('error', 'Unknown error')}")
         
-        # Create alerts
-        alerts_result = create_alerts_from_analysis(user_id, transaction_id, analysis_results)
-        if alerts_result["status"] == "success":
-            results["alerts_created"] = alerts_result["alerts_created"]
+        # Process alerts result
+        if isinstance(alerts_result, dict) and alerts_result.get("status") == "success":
+            results["alerts_created"] = alerts_result.get("alerts_created", [])
+        elif isinstance(alerts_result, Exception):
+            results["errors"].append(f"Alert creation failed: {str(alerts_result)}")
         else:
-            results["errors"].append(f"Alert creation failed: {alerts_result['error']}")
+            results["errors"].append(f"Alert creation failed: {alerts_result.get('error', 'Unknown error')}")
         
-        # Update agent run
-        run_update = update_agent_run_completion(run_id, timings)
-        if run_update["status"] == "success":
+        # Process agent run update
+        if isinstance(run_update, dict) and run_update.get("status") == "success":
             results["run_updated"] = True
+        elif isinstance(run_update, Exception):
+            results["errors"].append(f"Run update failed: {str(run_update)}")
         else:
-            results["errors"].append(f"Run update failed: {run_update['error']}")
+            results["errors"].append(f"Run update failed: {run_update.get('error', 'Unknown error')}")
         
         # Determine overall status
         if results["errors"]:

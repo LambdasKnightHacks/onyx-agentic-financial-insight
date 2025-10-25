@@ -16,7 +16,6 @@ from typing import AsyncGenerator, Dict, Any
 from google.adk.agents import BaseAgent, InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
-from google.genai import Client
 
 from .prompt import SYNTHESIS_PROMPT
 from .tools import (
@@ -26,6 +25,7 @@ from .tools import (
     create_fallback_insight
 )
 from ...utils.json_parser import parse_json_response
+from ...config import get_llm_client, LLM_MODEL
 
 
 class SynthesizerAgent(BaseAgent):
@@ -48,9 +48,8 @@ class SynthesizerAgent(BaseAgent):
         """Execute insight synthesis with proper state management."""
         
         try:
-            # Initialize LLM client
-            client = Client()
-            model = "gemini-2.5-flash"
+            # Use shared LLM client for efficiency
+            client = get_llm_client()
             
             # Step 1: Read required data from session state
             merged_results = ctx.session.state.get("merged_results", {})
@@ -82,9 +81,9 @@ class SynthesizerAgent(BaseAgent):
                 merged_results=formatted_results
             )
             
-            # Step 5: Call LLM for insight generation
+            # Step 5: Call LLM for insight generation with optimized model
             response = await client.aio.models.generate_content(
-                model=model,
+                model=LLM_MODEL,
                 contents=prompt
             )
             

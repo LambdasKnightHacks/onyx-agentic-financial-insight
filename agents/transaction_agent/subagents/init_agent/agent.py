@@ -19,11 +19,9 @@ from google.adk.agents import BaseAgent, InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
 from ...tools.database import (
-    check_transaction_exists,
-    create_agent_run,
-    fetch_user_category_rules,
-    fetch_user_recent_transactions,
-    fetch_user_accounts
+    check_transaction_exists_async,
+    create_agent_run_async,
+    fetch_user_context_parallel
 )
 
 from ...config import AGENT_MODES, AGENT_STATUS
@@ -69,18 +67,7 @@ class InitAgent(BaseAgent):
             plaid_transaction_id = incoming_transaction.get("plaid_transaction_id")
             is_test_transaction = incoming_transaction.get("is_test_transaction", False)
             
-            if plaid_transaction_id and not is_test_transaction:
-                exists_result = check_transaction_exists(plaid_transaction_id)
-                if exists_result.get("status") == "success" and exists_result.get("exists"):
-                    yield Event(
-                        author=self.name,
-                        content=Content(parts=[Part(text=f"Transaction {plaid_transaction_id} already processed. Skipping analysis.")])
-                    )
-                    # Set flag to skip further processing
-                    ctx.session.state["skip_analysis"] = True
-                    return
-
-            # Step 2: Create agent run record
+            # Parallel execution: Check deduplication and create run record simultaneously
             run_id = str(uuid.uuid4())
             run_data = {
                 "user_id": user_id,
@@ -89,32 +76,40 @@ class InitAgent(BaseAgent):
                 "status": AGENT_STATUS["RUNNING"]
             }
             
-            create_result = create_agent_run(run_data)
-            if create_result.get("status") != "success":
-                yield Event(
-                    author=self.name,
-                    content=Content(parts=[Part(text=f"Failed to create agent run: {create_result.get('error')}")])
+            if plaid_transaction_id and not is_test_transaction:
+                # Run deduplication check and agent run creation in parallel
+                import asyncio
+                exists_result, create_result = await asyncio.gather(
+                    check_transaction_exists_async(plaid_transaction_id),
+                    create_agent_run_async(run_data),
+                    return_exceptions=True
                 )
-                # Continue with analysis but without run_id for database persistence
-                run_id = None
+                
+                if isinstance(exists_result, dict) and exists_result.get("status") == "success" and exists_result.get("exists"):
+                    yield Event(
+                        author=self.name,
+                        content=Content(parts=[Part(text=f"Transaction {plaid_transaction_id} already processed. Skipping analysis.")])
+                    )
+                    ctx.session.state["skip_analysis"] = True
+                    return
             else:
+                # No deduplication check needed
+                create_result = await create_agent_run_async(run_data)
+            
+            # Extract run_id from create result
+            if isinstance(create_result, dict) and create_result.get("status") == "success":
                 run_id = create_result.get("run_id")
-            # Load user's custom category rules
-            rules_result = fetch_user_category_rules(user_id)
-            user_rules = rules_result.get("data", []) if rules_result.get("status") == "success" else []
+            else:
+                # Continue with analysis but without run_id
+                run_id = None
             
-            # Load recent transactions for fraud baseline
-            recent_result = fetch_user_recent_transactions(user_id, days=30)
-            baseline_transactions = recent_result.get("data", []) if recent_result.get("status") == "success" else []
+            # Step 2: Fetch all user context in parallel (3 queries at once)
+            context_data = await fetch_user_context_parallel(user_id, days=30)
             
-            # Load user's accounts for cashflow analysis
-            accounts_result = fetch_user_accounts(user_id)
-            user_accounts = accounts_result.get("data", []) if accounts_result.get("status") == "success" else []
-            
-            # Step 4: Package context for downstream agents
-            # Calculate some quick stats for context
-            total_baseline_amount = sum(float(tx.get("amount", 0)) for tx in baseline_transactions)
-            avg_daily_spend = total_baseline_amount / 30 if baseline_transactions else 0
+            user_rules = context_data["user_rules"]
+            baseline_transactions = context_data["baseline_transactions"]
+            user_accounts = context_data["user_accounts"]
+            baseline_stats = context_data["baseline_stats"]
             
             # Yield event with state updates via EventActions
             yield Event(
@@ -127,11 +122,7 @@ class InitAgent(BaseAgent):
                     "user_accounts": user_accounts,
                     "init_complete": True,
                     "skip_analysis": False,
-                    "baseline_stats": {
-                        "total_amount_30d": total_baseline_amount,
-                        "avg_daily_spend": avg_daily_spend,
-                        "transaction_count": len(baseline_transactions)
-                    }
+                    "baseline_stats": baseline_stats
                 })
             )
             
