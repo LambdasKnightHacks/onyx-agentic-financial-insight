@@ -30,7 +30,7 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || sup
   }
 })
 
-// Database types based on your Supabase schema
+// Database types
 export interface Database {
   public: {
     Tables: {
@@ -87,6 +87,38 @@ export interface Database {
           display_mask?: string | null
           created_at?: string
           institution?: string | null
+        }
+      }
+      account_balances: {
+        Row: {
+          id: string
+          account_id: string
+          as_of: string
+          current: number | null
+          available: number | null
+          currency: string | null
+          source: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          account_id: string
+          as_of: string
+          current?: number | null
+          available?: number | null
+          currency?: string | null
+          source?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          account_id?: string
+          as_of?: string
+          current?: number | null
+          available?: number | null
+          currency?: string | null
+          source?: string | null
+          created_at?: string
         }
       }
       transactions: {

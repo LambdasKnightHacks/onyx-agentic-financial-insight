@@ -17,7 +17,11 @@ import { Badge } from "@/src/components/ui/badge"
 import { useAuth } from "@/src/components/auth-context"
 import { signout } from "@/src/lib/auth-actions"
 
+import { useRouter } from "next/navigation"
+
+
 export function AppHeader() {
+  const router = useRouter()
   const [lastSync, setLastSync] = useState("2m ago")
   const [isSyncing, setIsSyncing] = useState(false)
   const { user } = useAuth()
@@ -62,7 +66,7 @@ export function AppHeader() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />

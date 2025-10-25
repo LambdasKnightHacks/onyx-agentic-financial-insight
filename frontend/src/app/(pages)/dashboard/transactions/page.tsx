@@ -27,8 +27,12 @@ export default function TransactionsPage() {
         const [txnRes, accRes] = await Promise.all([fetch("/api/transactions"), fetch("/api/accounts")])
         const txnData = await txnRes.json()
         const accData = await accRes.json()
-        setTransactions(txnData)
-        setAccounts(accData)
+        
+        console.log("Transactions loaded:", txnData?.length || 0, txnData)
+        console.log("Accounts loaded:", accData?.length || 0, accData)
+        
+        setTransactions(Array.isArray(txnData) ? txnData : [])
+        setAccounts(Array.isArray(accData) ? accData : [])
       } catch (error) {
         console.error("Failed to fetch data:", error)
       } finally {
@@ -132,7 +136,6 @@ export default function TransactionsPage() {
       <div className="space-y-6">
         {Object.entries(groupedTransactions).map(([accountId, txns]) => {
           const account = getAccountById(accountId)
-          if (!account) return null
 
           return (
             <Card key={accountId}>
@@ -143,9 +146,9 @@ export default function TransactionsPage() {
                       <CreditCard className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{account.institution}</CardTitle>
+                      <CardTitle className="text-lg">{account?.institution || "Unknown Account"}</CardTitle>
                       <CardDescription>
-                        {account.nickname} •••• {account.last4}
+                        {account?.nickname || "Account"} •••• {account?.last4 || "****"}
                       </CardDescription>
                     </div>
                   </div>
@@ -250,8 +253,8 @@ export default function TransactionsPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Account</p>
                     <p className="font-medium">
-                      {getAccountById(selectedTransaction.accountId)?.nickname} ••••{" "}
-                      {getAccountById(selectedTransaction.accountId)?.last4}
+                      {getAccountById(selectedTransaction.accountId)?.nickname || "Unknown"} ••••{" "}
+                      {getAccountById(selectedTransaction.accountId)?.last4 || "****"}
                     </p>
                   </div>
                   <div>
