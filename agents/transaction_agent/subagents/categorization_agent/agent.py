@@ -13,11 +13,11 @@ from typing import AsyncGenerator
 from google.adk.agents import BaseAgent, InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
-from google.genai import Client
 
 from .prompt import CATEGORIZATION_PROMPT
 from ...utils.json_parser import parse_json_response
 from ...a2a import a2a_client, CategorizationAgentMessageHandler
+from ...config import get_llm_client, LLM_MODEL
 
 
 class CategorizationAgent(BaseAgent):
@@ -43,9 +43,8 @@ class CategorizationAgent(BaseAgent):
         """Execute categorization with proper state management."""
         
         try:
-            # Initialize LLM client
-            client = Client()
-            model = "gemini-2.5-flash"
+            # Use shared LLM client for efficiency
+            client = get_llm_client()
             
             # Step 1: Read from session state
             transaction = ctx.session.state.get("incoming_transaction", {})
@@ -76,9 +75,9 @@ class CategorizationAgent(BaseAgent):
                 payment_channel=payment_channel
             )
 
-            # Step 3: Call LLM directly
+            # Step 3: Call LLM directly with optimized model
             response = await client.aio.models.generate_content(
-                model=model,
+                model=LLM_MODEL,
                 contents=prompt
             )
             
@@ -89,7 +88,34 @@ class CategorizationAgent(BaseAgent):
             result_dict = parse_json_response(llm_response_text)
             
             if result_dict and isinstance(result_dict, dict):
-                # Step 5: Write structured output to state
+                # ✅ DEFENSIVE FIELD VALIDATION - Ensure all required fields exist
+                # This prevents silent failures when LLM returns incomplete JSON
+                
+                # Infer category from subcategory if missing
+                if "category" not in result_dict:
+                    subcategory = result_dict.get("subcategory", "").lower()
+                    # Smart inference based on common subcategories
+                    category_map = {
+                        "coffee_tea": "food", "dining": "food", "groceries": "food", "bars": "food",
+                        "gas": "transportation", "public_transit": "transportation", "parking": "transportation",
+                        "rent": "living", "mortgage": "living", "electricity": "living", "water": "living",
+                        "clothing": "shopping", "electronics": "shopping", "online": "shopping",
+                        "movies": "entertainment", "streaming": "entertainment", "games": "entertainment",
+                        "flights": "travel", "hotels": "travel",
+                        "doctor": "healthcare", "prescriptions": "healthcare"
+                    }
+                    result_dict["category"] = category_map.get(subcategory, "unknown")
+                
+                if "subcategory" not in result_dict:
+                    result_dict["subcategory"] = "unknown"
+                
+                if "confidence" not in result_dict:
+                    result_dict["confidence"] = 0.5
+                
+                if "reason" not in result_dict:
+                    result_dict["reason"] = "Automatic categorization based on merchant name"
+                
+                # Step 5: Write structured output to state (now guaranteed to have all fields)
                 yield Event(
                     author=self.name,
                     content=Content(parts=[Part(text=f"Categorized as {result_dict.get('category')}/{result_dict.get('subcategory')} with {result_dict.get('confidence', 0):.2f} confidence")]),
@@ -98,24 +124,35 @@ class CategorizationAgent(BaseAgent):
                     })
                 )
             else:
-                # Parsing failed, but still provide text response
+                # Parsing failed completely - provide fallback with all required fields
                 yield Event(
                     author=self.name,
-                    content=Content(parts=[Part(text=f"Categorization complete (text response): {llm_response_text[:200]}...")]),
+                    content=Content(parts=[Part(text=f"Categorization fallback: Using default category")]),
                     actions=EventActions(state_delta={
                         "categorization_result": {
-                            "raw_response": llm_response_text,
+                            "category": "unknown",
+                            "subcategory": "unknown",
+                            "confidence": 0.0,
+                            "reason": "Failed to parse LLM response - using default",
+                            "raw_response": llm_response_text[:500],
                             "error": "Failed to parse JSON"
                         }
                     })
                 )
                 
         except Exception as e:
+            # Ensure even exceptions produce valid output with all required fields
             yield Event(
                 author=self.name,
                 content=Content(parts=[Part(text=f"Categorization error: {str(e)}")]),
                 actions=EventActions(state_delta={
-                    "categorization_result": {"error": str(e)}
+                    "categorization_result": {
+                        "category": "unknown",
+                        "subcategory": "unknown",
+                        "confidence": 0.0,
+                        "reason": f"Error during categorization: {str(e)}",
+                        "error": str(e)
+                    }
                 })
             )
 
