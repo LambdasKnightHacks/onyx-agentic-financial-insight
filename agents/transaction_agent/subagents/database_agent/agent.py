@@ -18,7 +18,7 @@ from google.adk.agents import BaseAgent, InvocationContext
 from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
 
-from .tools import persist_analysis_results
+# Import moved to inside async function to avoid issues
 
 
 class DatabaseAgent(BaseAgent):
@@ -131,7 +131,10 @@ class DatabaseAgent(BaseAgent):
                 content=Content(parts=[Part(text="Starting database persistence...")])
             )
             
-            persistence_result = persist_analysis_results(
+            # Import the async version
+            from .tools import persist_analysis_results_async
+            
+            persistence_result = await persist_analysis_results_async(
                 user_id=user_id,
                 run_id=run_id,
                 plaid_transaction_id=plaid_transaction_id,
@@ -160,14 +163,20 @@ class DatabaseAgent(BaseAgent):
                 message = f"Database persistence failed. Errors: {persistence_result['errors']}"
             
             # Step 6: Write results to session state
+            state_delta = {
+                "database_result": persistence_result,
+                "database_complete": True,
+                "pipeline_complete": True
+            }
+            
+            # Extract insights_id if available and set it at top level for main.py
+            if persistence_result.get("insight_id"):
+                state_delta["insights_id"] = persistence_result["insight_id"]
+            
             yield Event(
                 author=self.name,
                 content=Content(parts=[Part(text=message)]),
-                actions=EventActions(state_delta={
-                    "database_result": persistence_result,
-                    "database_complete": True,
-                    "pipeline_complete": True
-                })
+                actions=EventActions(state_delta=state_delta)
             )
             
         except Exception as e:

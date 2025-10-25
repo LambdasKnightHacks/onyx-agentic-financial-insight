@@ -23,7 +23,13 @@ healthcare: doctor, prescriptions, insurance
 education: tuition, books, courses
 financial: loan, credit_card_payments, bank_fees, taxes, investment_purchases
 
-Output ONLY valid JSON (no markdown, no explanation):
+CRITICAL: You MUST include ALL FOUR fields in your response:
+- category (required)
+- subcategory (required)
+- confidence (required, 0.0 to 1.0)
+- reason (required)
+
+Output ONLY valid JSON (no markdown, no extra text, no explanation):
 {{
   "category": "food",
   "subcategory": "coffee_tea",
