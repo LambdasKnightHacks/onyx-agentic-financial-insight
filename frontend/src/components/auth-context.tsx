@@ -1,42 +1,57 @@
 "use client"
 
-import { createContext, useContext, useState } from 'react'
-
-interface User {
-  id: string
-  name: string
-  email: string
-}
+import { createContext, useContext, useEffect, useState } from 'react'
+import { createClient } from '@/src/utils/supabase/client'
+import type { User } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
-  setUser: (user: User | null) => void
-  signOut: () => void
+  loading: boolean
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  setUser: () => {},
-  signOut: () => {},
+  loading: true,
+  signOut: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setLoading(false)
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [supabase.auth])
 
   const signOut = async () => {
     try {
-      // Call logout API to clear cookie
-      await fetch('/api/auth/logout', { method: 'POST' })
-      setUser(null)
+      await supabase.auth.signOut()
     } catch (error) {
       console.error('Error signing out:', error)
-      // Still clear user from context even if API call fails
-      setUser(null)
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )

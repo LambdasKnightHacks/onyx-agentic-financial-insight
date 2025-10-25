@@ -1,9 +1,8 @@
 "use client"
 
 import { cn } from "@/src/lib/utils"
-
 import { useState } from "react"
-import { Search, RefreshCw, User } from "lucide-react"
+import { Search, RefreshCw, User, LogOut } from "lucide-react"
 import { Button } from "@/src/components/ui/button"
 import { Input } from "@/src/components/ui/input"
 import {
@@ -15,10 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu"
 import { Badge } from "@/src/components/ui/badge"
+import { useAuth } from "@/src/components/auth-context"
+import { signout } from "@/src/lib/auth-actions"
 
 export function AppHeader() {
   const [lastSync, setLastSync] = useState("2m ago")
   const [isSyncing, setIsSyncing] = useState(false)
+  const { user } = useAuth()
 
   const handleSync = async () => {
     setIsSyncing(true)
@@ -26,6 +28,10 @@ export function AppHeader() {
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setLastSync("Just now")
     setIsSyncing(false)
+  }
+
+  const handleSignOut = async () => {
+    await signout()
   }
 
   return (
@@ -51,12 +57,17 @@ export function AppHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>
+              {user?.email || "My Account"}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Sign out</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

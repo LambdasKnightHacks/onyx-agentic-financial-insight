@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/src/lib/supabase"
 import { transformSupabaseInsightToInsight } from "@/src/types/database-types"
-import { getUserIdFromRequest } from "@/src/app/api/auth/auth"
+import { getUserIdFromRequest } from "@/src/lib/auth-utils"
 
 export async function GET(request: NextRequest) {
   try {
