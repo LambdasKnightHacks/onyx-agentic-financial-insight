@@ -6,12 +6,12 @@ import { LayoutDashboard, ArrowLeftRight, Lightbulb, ShieldAlert, Zap, Settings 
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { href: "/insights", label: "Insights", icon: Lightbulb },
-  { href: "/alerts", label: "Alerts", icon: ShieldAlert },
-  { href: "/automations", label: "Automations", icon: Zap },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/transactions", label: "Transactions", icon: ArrowLeftRight },
+  { href: "/dashboard/insights", label: "Insights", icon: Lightbulb },
+  { href: "/dashboard/alerts", label: "Alerts", icon: ShieldAlert },
+  { href: "/dashboard/automations", label: "Automations", icon: Zap },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ]
 
 export function AppSidebar() {

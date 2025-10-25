@@ -3,8 +3,6 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
-import { AppSidebar } from "@/components/app-sidebar"
-import { AppHeader } from "@/components/app-header"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -23,11 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`font-sans antialiased`}>
-        <AppSidebar />
-        <div className="ml-64">
-          <AppHeader />
-          <main className="min-h-[calc(100vh-4rem)]">{children}</main>
-        </div>
+        {children}
         <Analytics />
       </body>
     </html>
