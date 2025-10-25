@@ -1,0 +1,25 @@
+{
+  "name": "plaid-auth-simple",
+  "version": "1.0.0",
+  "description": "Simple Plaid API authentication implementation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "plaid": "^13.0.0",
+    "supabase": "^2.53.6"
+  },
+  "keywords": [
+    "plaid",
+    "api",
+    "auth",
+    "banking"
+  ],
+  "author": "",
+  "license": "MIT"
+}
