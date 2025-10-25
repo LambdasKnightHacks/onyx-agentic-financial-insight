@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Get backend URL from environment
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
 
     // Forward request to Express backend with user ID
     const response = await fetch(`${backendUrl}/api/plaid/create-link-token`, {

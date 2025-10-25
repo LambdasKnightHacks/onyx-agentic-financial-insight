@@ -44,6 +44,11 @@ export const useWebSocket = (userId?: string) => {
       return;
     }
 
+    // Close any existing connection first
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
     console.log(`Attempting to connect to ${WEBSOCKET_CONFIG.url}`);
     addLog(`Connecting to WebSocket...`);
 
@@ -96,7 +101,10 @@ export const useWebSocket = (userId?: string) => {
 
       wsRef.current.onerror = (error) => {
         console.error("WebSocket error:", error);
-        addLog(`❌ WebSocket error occurred`);
+        // Only log error if we were previously connected
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          addLog(`❌ WebSocket error occurred`);
+        }
       };
     } catch (error) {
       console.error("Failed to create WebSocket connection:", error);
