@@ -38,8 +38,10 @@ import {
 } from "lucide-react";
 import type { Transaction, Account } from "@/src/lib/types";
 import { useWebSocket } from "@/src/components/hooks/useWebSocket";
+import { useAuth } from "@/src/components/auth-context";
 
 export default function TransactionsPage() {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +56,9 @@ export default function TransactionsPage() {
     Record<string, any>
   >({});
 
-  // WebSocket integration
+  // pass user id to websocket
   const { isConnected, isAnalyzing, agentResults, connect, startAnalysis } =
-    useWebSocket();
+    useWebSocket(user?.id);
 
   const targetAgents = [
     { name: "categorization_agent", icon: "🏷️", display: "Categorization" },
@@ -71,7 +73,6 @@ export default function TransactionsPage() {
     if (!isConnected) {
       connect();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Track analysis state and save results
@@ -222,10 +223,16 @@ export default function TransactionsPage() {
                 </div>
               </div>
               <Button
-                onClick={() => {
+                onClick={async () => {
+                  // Check if we have accounts
+                  if (!accounts || accounts.length === 0) {
+                    alert("Please connect a bank account first");
+                    return;
+                  }
+
                   const testTransaction = {
                     plaid_transaction_id: "test_websocket_" + Date.now(),
-                    amount: Math.floor(Math.random() * 500) + 25,
+                    amount: -(Math.floor(Math.random() * 500) + 25), // Negative for debit
                     merchant_name: [
                       "Amazon.com",
                       "Starbucks",
@@ -234,21 +241,58 @@ export default function TransactionsPage() {
                       "Netflix",
                       "Uber",
                     ][Math.floor(Math.random() * 6)],
-                    description: "Test transaction",
+                    description: "Test transaction via WebSocket",
                     posted_at: new Date().toISOString().split("T")[0],
                     category: "Shopping",
                     subcategory: "General",
-                    account_id: accounts[0]?.id || "test-account",
+                    account_id: accounts[0].id,
                     location_city: "San Francisco",
                     location_state: "CA",
                     payment_channel: "online",
-                    transaction_type: "debit",
+                    is_test_transaction: true, // Flag to prevent duplicate check
                   };
 
-                  console.log("Starting test analysis:", testTransaction);
-                  startAnalysis(testTransaction);
+                  console.log("Step 1: Creating transaction in database...");
+
+                  try {
+                    // Step 1: Create transaction in database
+                    const response = await fetch("/api/transactions", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify(testTransaction),
+                    });
+
+                    if (!response.ok) {
+                      const errorData = await response.json();
+                      console.error("Failed to create transaction:", errorData);
+                      alert(
+                        `Failed to create transaction: ${errorData.error || "Unknown error"}`
+                      );
+                      return;
+                    }
+
+                    const createdTransaction = await response.json();
+                    console.log(
+                      "Step 2: Transaction created successfully:",
+                      createdTransaction.id
+                    );
+
+                    // Step 2: Start WebSocket analysis
+                    console.log("Step 3: Starting AI analysis...");
+                    startAnalysis(testTransaction);
+
+                    // Immediately add the new transaction to the list (optimistic update)
+                    setTransactions((prev) => [createdTransaction, ...prev]);
+                  } catch (error) {
+                    console.error("Error in test transaction flow:", error);
+                    alert(
+                      "Error creating test transaction. Check console for details."
+                    );
+                  }
                 }}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || !accounts || accounts.length === 0}
                 className="shrink-0"
                 size="lg"
               >
@@ -564,10 +608,10 @@ export default function TransactionsPage() {
                           className={`font-semibold ${
                             txn.amount > 0
                               ? "text-green-500"
-                              : "text-foreground"
+                              : "text-red-500"
                           }`}
                         >
-                          {txn.amount > 0 ? "+" : ""}$
+                          {txn.amount > 0 ? "+" : "-"}$
                           {Math.abs(txn.amount).toFixed(2)}
                         </p>
                         <Badge variant="outline" className="text-xs mt-1">

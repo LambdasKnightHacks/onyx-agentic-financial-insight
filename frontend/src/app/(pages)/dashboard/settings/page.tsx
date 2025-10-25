@@ -7,7 +7,7 @@ import { Switch } from "@/src/components/ui/switch"
 import { Button } from "@/src/components/ui/button"
 import { Badge } from "@/src/components/ui/badge"
 import { Bell, Shield, Database, Trash2 } from "lucide-react"
-import { AddAccountDialog } from "@/src/components/add-account-dialog"
+import { AddAccountDialog } from "@/src/components/add-account"
 import { useToast } from "@/src/components/hooks/use-toast"
 import type { Account } from "@/src/lib/types"
 import {

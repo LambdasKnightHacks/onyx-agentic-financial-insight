@@ -236,3 +236,70 @@ async def create_agent_run_async(run_data: Dict[str, Any]) -> Dict[str, Any]:
     """Async version of create_agent_run."""
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(_db_executor, create_agent_run, run_data)
+
+def create_transaction_record(user_id: str, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create a transaction record in the database if it doesn't exist.
+    Used for test transactions or manual transactions.
+    
+    Args:
+        user_id: User UUID
+        transaction_data: Transaction data from incoming message
+        
+    Returns:
+        Dict with status and transaction_id
+    """
+    try:
+        supabase = get_supabase_client()
+        
+        # Prepare transaction data for database
+        db_transaction = {
+            "user_id": user_id,
+            "account_id": transaction_data.get("account_id"),
+            "plaid_transaction_id": transaction_data.get("plaid_transaction_id"),
+            "source": "plaid",  # Use 'plaid' to satisfy database constraint
+            "amount": transaction_data.get("amount", 0),
+            "merchant_name": transaction_data.get("merchant_name"),
+            "merchant": transaction_data.get("merchant_name"),  # Duplicate for compatibility
+            "description": transaction_data.get("description") or transaction_data.get("merchant_name"),
+            "posted_at": transaction_data.get("posted_at"),
+            "category": transaction_data.get("category", "Uncategorized"),
+            "subcategory": transaction_data.get("subcategory"),
+            "location_city": transaction_data.get("location_city"),
+            "location_state": transaction_data.get("location_state"),
+            "payment_channel": transaction_data.get("payment_channel", "online"),
+            "currency": "USD",
+            "pending": False,
+            "status": "processed",  # needs to be processed for transaction to go through
+            # Initialize analysis fields
+            "fraud_score": 0,
+            "category_confidence": 0,
+            "category_reason": None,
+        }
+        
+        # Insert transaction
+        result = supabase.table(TABLES["transactions"])\
+            .insert(db_transaction)\
+            .execute()
+        
+        if result.data:
+            return {
+                "status": "success",
+                "transaction_id": result.data[0]["id"],
+                "message": "Transaction created successfully"
+            }
+        else:
+            return {
+                "status": "error",
+                "error": "No data returned from insert"
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+async def create_transaction_record_async(user_id: str, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Async version of create_transaction_record."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(_db_executor, create_transaction_record, user_id, transaction_data)
