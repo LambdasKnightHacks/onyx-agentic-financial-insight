@@ -184,172 +184,34 @@ class PlaidService {
     }
   }
 
-  async syncTransactions(
-    userId: string,
-    itemId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<{ added: number; updated: number }> {
+  async getItem(itemId: string): Promise<PlaidItem> {
     try {
-      // Get the access token for this item
-      const accessToken = await this.getAccessToken(userId, itemId);
-
-      // Get current cursor from database
-      const { data: itemData, error: itemError } = await supabase
+      const { data, error } = await supabase
         .from("plaid_items")
-        .select("cursor")
+        .select("*")
         .eq("item_id", itemId)
         .single();
 
-      if (itemError) {
-        throw new Error(`Failed to get cursor: ${itemError.message}`);
+      if (error || !data) {
+        throw new Error(`Item not found: ${error?.message}`);
       }
 
-      // Set default date range if not provided
-      const defaultStartDate =
-        startDate ||
-        new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0];
-      const defaultEndDate = endDate || new Date().toISOString().split("T")[0];
-
-      // Fetch transactions from Plaid
-      const request: TransactionsGetRequest = {
-        access_token: accessToken,
-        start_date: defaultStartDate,
-        end_date: defaultEndDate,
-      };
-
-      // Add cursor if it exists
-      if (itemData?.cursor) {
-        (request as any).cursor = itemData.cursor;
-      }
-
-      const response = await this.client.transactionsGet(request);
-      const transactions = response.data.transactions;
-      const nextCursor = response.data.next_cursor;
-
-      let added = 0;
-      let updated = 0;
-
-      // Process each transaction
-      for (const plaidTransaction of transactions) {
-        try {
-          // Check if transaction already exists
-          const { data: existingTx, error: checkError } = await supabase
-            .from("transactions")
-            .select("id")
-            .eq("plaid_transaction_id", plaidTransaction.transaction_id)
-            .single();
-
-          if (checkError && checkError.code !== "PGRST116") {
-            // PGRST116 = no rows found
-            console.error("Error checking existing transaction:", checkError);
-            continue;
-          }
-
-          // Get account ID from our accounts table
-          const { data: accountData, error: accountError } = await supabase
-            .from("accounts")
-            .select("id")
-            .eq("plaid_account_id", plaidTransaction.account_id)
-            .single();
-
-          if (accountError) {
-            console.error("Account not found for transaction:", accountError);
-            continue;
-          }
-
-          const transactionData: Partial<PlaidTransaction> = {
-            user_id: userId,
-            account_id: accountData.id,
-            plaid_transaction_id: plaidTransaction.transaction_id,
-            source: "plaid",
-            posted_at: plaidTransaction.date,
-            authorized_date: plaidTransaction.authorized_date || null,
-            amount: plaidTransaction.amount,
-            currency: plaidTransaction.iso_currency_code || "USD",
-            merchant_name: plaidTransaction.merchant_name || null,
-            merchant: plaidTransaction.merchant_name || null,
-            description: plaidTransaction.name,
-            category: plaidTransaction.category?.[0] || null,
-            subcategory: plaidTransaction.category?.[1] || null,
-            pending: plaidTransaction.pending,
-            payment_channel: plaidTransaction.payment_channel || null,
-            status: plaidTransaction.pending ? "pending" : "posted",
-            location_city: plaidTransaction.location?.city || null,
-            location_state: plaidTransaction.location?.region || null,
-            geo_lat: plaidTransaction.location?.lat || null,
-            geo_lon: plaidTransaction.location?.lon || null,
-            mcc: (plaidTransaction as any).mcc || null,
-            raw: plaidTransaction,
-            hash: plaidTransaction.transaction_id, // Use Plaid ID as hash for deduplication
-            ingested_at: new Date().toISOString(),
-          };
-
-          if (existingTx) {
-            // Update existing transaction
-            const { error: updateError } = await supabase
-              .from("transactions")
-              .update(transactionData)
-              .eq("id", existingTx.id);
-
-            if (!updateError) {
-              updated++;
-            }
-          } else {
-            // Insert new transaction
-            const { error: insertError } = await supabase
-              .from("transactions")
-              .insert(transactionData);
-
-            if (!insertError) {
-              added++;
-            }
-          }
-        } catch (txError) {
-          console.error("Error processing transaction:", txError);
-          continue;
-        }
-      }
-
-      // Update cursor in plaid_items
-      if (nextCursor) {
-        const { error: cursorError } = await supabase
-          .from("plaid_items")
-          .update({ cursor: nextCursor })
-          .eq("item_id", itemId);
-
-        if (cursorError) {
-          console.error("Error updating cursor:", cursorError);
-        }
-      }
-
-      return { added, updated };
+      return data;
     } catch (error) {
-      console.error("Error syncing transactions:", error);
+      console.error("Error getting item:", error);
       throw error;
     }
   }
 
   async getTransactions(
     accessToken: string,
-    startDate: string,
-    endDate: string,
-    cursor?: string
+    cursor: string | null
   ): Promise<any> {
-    const request: TransactionsGetRequest = {
+    const request: any = {
       access_token: accessToken,
-      start_date: startDate,
-      end_date: endDate,
+      cursor: cursor,
     };
-
-    // Add cursor if provided
-    if (cursor) {
-      (request as any).cursor = cursor;
-    }
-
-    return await this.client.transactionsGet(request);
+    return await this.client.transactionsSync(request);
   }
 }
 
