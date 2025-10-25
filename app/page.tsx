@@ -4,10 +4,10 @@ import Link from "next/link"
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4 md:px-8">
+        <div className="container flex h-16 items-center justify-between px-4 md:px-8 mx-auto">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Sparkles className="h-5 w-5 text-primary-foreground" />
@@ -26,9 +26,9 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1">
-        <div className="container px-4 md:px-8">
-          <div className="mx-auto max-w-4xl py-20 md:py-32">
+      <main className="flex-1 flex items-center justify-center w-full">
+        <div className="container px-4 md:px-8 mx-auto w-full">
+          <div className="mx-auto max-w-4xl py-12 md:py-20">
             <div className="text-center space-y-8">
               {/* Badge */}
               <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5 text-sm">
@@ -99,8 +99,8 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="container px-4 md:px-8">
+      <footer className="border-t border-border py-8 w-full">
+        <div className="container px-4 md:px-8 mx-auto">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <p className="text-sm text-muted-foreground">© 2025 MyFinance. Built with v0.</p>
             <div className="flex gap-6 text-sm text-muted-foreground">
