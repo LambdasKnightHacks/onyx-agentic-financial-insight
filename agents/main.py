@@ -9,7 +9,7 @@ from google.genai.types import Content, Part
 from google.adk.runners import Runner
 from pydantic import BaseModel
 
-from agents.transaction_agent.agent import root_agent
+from transaction_agent.agent import root_agent
 
 app = FastAPI()
 
