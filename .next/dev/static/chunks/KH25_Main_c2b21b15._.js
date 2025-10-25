@@ -43,32 +43,32 @@ var _s = __turbopack_context__.k.signature();
 ;
 const navItems = [
     {
-        href: "/",
+        href: "/dashboard",
         label: "Overview",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$KH25$2f$Main$2f$node_modules$2f2e$pnpm$2f$lucide$2d$react$40$0$2e$454$2e$0_react$40$19$2e$2$2e$0$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$layout$2d$dashboard$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__LayoutDashboard$3e$__["LayoutDashboard"]
     },
     {
-        href: "/transactions",
+        href: "/dashboard/transactions",
         label: "Transactions",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$KH25$2f$Main$2f$node_modules$2f2e$pnpm$2f$lucide$2d$react$40$0$2e$454$2e$0_react$40$19$2e$2$2e$0$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2d$right$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeftRight$3e$__["ArrowLeftRight"]
     },
     {
-        href: "/insights",
+        href: "/dashboard/insights",
         label: "Insights",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$KH25$2f$Main$2f$node_modules$2f2e$pnpm$2f$lucide$2d$react$40$0$2e$454$2e$0_react$40$19$2e$2$2e$0$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$lightbulb$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Lightbulb$3e$__["Lightbulb"]
     },
     {
-        href: "/alerts",
+        href: "/dashboard/alerts",
         label: "Alerts",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$KH25$2f$Main$2f$node_modules$2f2e$pnpm$2f$lucide$2d$react$40$0$2e$454$2e$0_react$40$19$2e$2$2e$0$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shield$2d$alert$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ShieldAlert$3e$__["ShieldAlert"]
     },
     {
-        href: "/automations",
+        href: "/dashboard/automations",
         label: "Automations",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$KH25$2f$Main$2f$node_modules$2f2e$pnpm$2f$lucide$2d$react$40$0$2e$454$2e$0_react$40$19$2e$2$2e$0$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$zap$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Zap$3e$__["Zap"]
     },
     {
-        href: "/settings",
+        href: "/dashboard/settings",
         label: "Settings",
         icon: __TURBOPACK__imported__module__$5b$project$5d2f$KH25$2f$Main$2f$node_modules$2f2e$pnpm$2f$lucide$2d$react$40$0$2e$454$2e$0_react$40$19$2e$2$2e$0$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$settings$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Settings$3e$__["Settings"]
     }
