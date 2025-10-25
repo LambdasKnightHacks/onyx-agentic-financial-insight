@@ -1,0 +1,10 @@
+# Node / Next.js
+node_modules/
+.pnpm-store/
+.next/
+dist/
+out/
+coverage/
+*.log
+.env*
+.DS_Store
