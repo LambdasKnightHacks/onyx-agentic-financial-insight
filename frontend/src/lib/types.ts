@@ -154,3 +154,20 @@ export interface ChatResponse {
   session_id: string;
   timestamp: string;
 }
+
+export interface Budget {
+  id: string
+  user_id: string
+  category: string
+  subcategory?: string | null
+  label?: string | null
+  period: "day" | "week" | "month" | "year"
+  cap_amount: number
+  currency: string
+  start_on: string
+  rollover?: boolean | null
+  priority: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}

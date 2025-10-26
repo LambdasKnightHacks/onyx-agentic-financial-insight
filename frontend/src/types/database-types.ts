@@ -5,7 +5,7 @@ export type TransactionStatus = "posted" | "pending"
 export type AlertSeverity = "high" | "medium" | "low"
 export type AlertStatus = "new" | "ack" | "resolved"
 
-// Supabase Account type (matches your database schema)
+// Supabase Account type
 export interface SupabaseAccount {
   id: string
   user_id: string
@@ -19,7 +19,7 @@ export interface SupabaseAccount {
   balance_available: number
 }
 
-// Frontend Account interface (compatible with your existing UI)
+// Frontend Account interface
 export interface Account {
   id: string
   institution: string
@@ -32,7 +32,7 @@ export interface Account {
   status: AccountStatus
 }
 
-// Supabase Transaction type (matches your database schema)
+// Supabase Transaction type
 export interface SupabaseTransaction {
   id: string
   user_id: string
@@ -64,7 +64,7 @@ export interface SupabaseTransaction {
   ingested_at: string
 }
 
-// Frontend Transaction interface (compatible with your existing UI)
+// Frontend Transaction interface
 export interface Transaction {
   id: string
   accountId: string
@@ -88,7 +88,7 @@ export interface Transaction {
   }
 }
 
-// Supabase Insight type (matches your database schema)
+// Supabase Insight type
 export interface SupabaseInsight {
   id: string
   user_id: string
@@ -100,7 +100,7 @@ export interface SupabaseInsight {
   created_at: string
 }
 
-// Frontend Insight interface (compatible with your existing UI)
+// Frontend Insight interface
 export interface Insight {
   id: string
   title: string
@@ -114,7 +114,7 @@ export interface Insight {
   }
 }
 
-// Supabase Alert type (matches your database schema)
+// Supabase Alert type
 export interface SupabaseAlert {
   id: string
   user_id: string
@@ -128,7 +128,7 @@ export interface SupabaseAlert {
   status: string | null
 }
 
-// Frontend FraudAlert interface (compatible with your existing UI)
+// Frontend FraudAlert interface
 export interface FraudAlert {
   id: string
   severity: AlertSeverity

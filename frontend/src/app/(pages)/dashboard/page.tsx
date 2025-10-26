@@ -5,16 +5,10 @@ import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import {
-  Banknote,
-  TrendingUp,
-  TrendingDown,
-  ShieldAlert,
-  Lightbulb,
-  Zap,
-  ExternalLink,
-} from "lucide-react";
-import type { Account, Transaction, FraudAlert } from "@/src/lib/types";
+import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, DollarSign, ExternalLink } from "lucide-react";
+import type { Account, Transaction } from "@/src/lib/types";
+import type { Alert } from "./alerts/types";
+import { getAlertTitle, getAlertIcon, getSeverityColor } from "./alerts/utils";
 import { PlaidLinkButton } from "@/src/components/plaid-link-button";
 import { useAuth } from "@/src/components/auth-context";
 
@@ -24,35 +18,84 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
   );
-  const [alerts, setAlerts] = useState<FraudAlert[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [netWorthChange, setNetWorthChange] = useState<number>(0);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [accountsRes, transactionsRes, alertsRes, insightsRes] =
+        const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes, allTransactionsRes] =
           await Promise.all([
             fetch("/api/accounts"),
-            fetch("/api/transactions?limit=5"),
-            fetch("/api/fraud?status=new"),
-            fetch("/api/insights?limit=3"),
+            fetch("/api/transactions?limit=3"),
+            fetch("/api/alerts?status=active&limit=3"),
+            fetch("/api/insights?"),
+            fetch("/api/budgets?"),
+            fetch("/api/transactions") // Fetch all transactions for net worth calculation
           ]);
 
         const accountsData = await accountsRes.json();
         const transactionsData = await transactionsRes.json();
         const alertsData = await alertsRes.json();
         const insightsData = await insightsRes.json();
+        const budgetsData = await budgetsRes.json();
+        const allTransactionsData = await allTransactionsRes.json();
 
         // Handle error responses
         setAccounts(Array.isArray(accountsData) ? accountsData : []);
         setRecentTransactions(
-          Array.isArray(transactionsData) ? transactionsData.slice(0, 5) : []
+          Array.isArray(transactionsData) ? transactionsData.slice(0, 3) : []
         );
         setAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 3) : []);
         setInsights(
-          Array.isArray(insightsData) ? insightsData.slice(0, 3) : []
+          Array.isArray(insightsData) ? insightsData : []
         );
+        setBudgets(
+          Array.isArray(budgetsData) ? budgetsData : []
+        );
+
+        // Calculate net worth change based on last 30 days of transactions
+        if (Array.isArray(allTransactionsData) && allTransactionsData.length > 0) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          // Filter transactions from last 30 days
+          const recentTxns = allTransactionsData.filter((txn: Transaction) => {
+            const txnDate = new Date(txn.date);
+            return txnDate >= thirtyDaysAgo;
+          });
+
+          // Calculate net change 
+          // Negative amounts are expenses, positive are income
+          const netChange = recentTxns.reduce((sum: number, txn: Transaction) => {
+            return sum - txn.amount; // Subtract because in Plaid, positive amounts are expenses
+          }, 0);
+
+          // Calculate current net worth
+          const currentNetWorth = Array.isArray(accountsData) 
+            ? accountsData.reduce((sum: number, acc: Account) => sum + acc.balanceCurrent, 0)
+            : 0;
+
+          // Calculate percentage change
+          // Previous net worth 
+          const previousNetWorth = currentNetWorth - netChange;
+          
+          // Calculate percentage
+          // Works for both positive and negative net worth
+          if (Math.abs(previousNetWorth) > 0.01) {
+            const percentChange = (netChange / Math.abs(previousNetWorth)) * 100;
+            setNetWorthChange(parseFloat(percentChange.toFixed(1)));
+          } else if (Math.abs(currentNetWorth) > 0.01 && netChange !== 0) {
+            // If previous net worth was near zero but current isn't, use current as base
+            const percentChange = (netChange / Math.abs(currentNetWorth)) * 100;
+            setNetWorthChange(parseFloat(percentChange.toFixed(1)));
+          } else {
+            setNetWorthChange(0);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
       } finally {
@@ -64,7 +107,6 @@ export default function DashboardPage() {
   }, []);
 
   const netWorth = accounts.reduce((sum, acc) => sum + acc.balanceCurrent, 0);
-  const netWorthChange = 8.4;
 
   if (loading) {
     return (
@@ -89,12 +131,12 @@ export default function DashboardPage() {
     if (metadata?.name) return metadata.name;
     if (metadata?.full_name) return metadata.full_name;
     if (metadata?.first_name) return metadata.first_name;
-    
+
     // Fall back to email if no defined name
     if (user.email) {
       return user.email.split("@")[0];
     }
-    
+
     return "";
   };
 
@@ -114,7 +156,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-lg mb-1">
-              🧪 Test Plaid Integration
+              Test Plaid Integration
             </h3>
             <p className="text-sm text-muted-foreground">
               Click below to connect a bank account via Plaid Link
@@ -123,7 +165,7 @@ export default function DashboardPage() {
           <PlaidLinkButton
             onSuccess={(accounts) => {
               console.log("Accounts connected:", accounts);
-              // Refresh the page data
+              // Refresh page
               window.location.reload();
             }}
           />
@@ -204,7 +246,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-2xl font-bold">
                       $
-                      {Math.abs(account.balanceCurrent).toLocaleString(
+                      {account.balanceCurrent.toLocaleString(
                         "en-US",
                         { minimumFractionDigits: 2 }
                       )}
@@ -230,7 +272,7 @@ export default function DashboardPage() {
                   <Lightbulb className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Advice</h3>
+                  <h3 className="font-semibold">Insights</h3>
                   <p className="text-2xl font-bold mt-1">{insights.length}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     insights available
@@ -248,9 +290,9 @@ export default function DashboardPage() {
                   <ShieldAlert className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Alerts</h3>
+                  <h3 className="font-semibold">Recent Alerts</h3>
                   <p className="text-2xl font-bold mt-1">
-                    {alerts.filter((a) => a.status === "new").length}
+                    {alerts.length}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     to review
@@ -262,16 +304,16 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer">
-            <a href="/dashboard/automations" className="block">
+            <a href="/dashboard/budgets" className="block">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-lg bg-green-100 dark:bg-green-950">
-                  <Zap className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Rules</h3>
-                  <p className="text-2xl font-bold mt-1">12</p>
+                  <h3 className="font-semibold">Budgets</h3>
+                  <p className="text-2xl font-bold mt-1">{budgets.length}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    actions this week
+                    active budgets
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -321,7 +363,7 @@ export default function DashboardPage() {
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Security Alerts</h2>
+            <h2 className="text-xl font-semibold">Recent Alerts</h2>
             <Button variant="ghost" size="sm" asChild>
               <a href="/dashboard/alerts">View all</a>
             </Button>
@@ -332,50 +374,43 @@ export default function DashboardPage() {
                 <ShieldAlert className="h-12 w-12 text-green-600 mx-auto mb-3" />
                 <p className="text-sm font-medium">All clear!</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  No security alerts at this time
+                  No alerts at this time
                 </p>
               </div>
             ) : (
-              alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="flex items-start gap-4 py-3 border-b last:border-0"
-                >
+              alerts.map((alert) => {
+                const AlertIcon = getAlertIcon(alert.type)
+                const severityColors = getSeverityColor(alert.severity)
+                const title = getAlertTitle(alert)
+                
+                return (
                   <div
-                    className={`p-2 rounded-lg ${
-                      alert.severity === "high"
-                        ? "bg-red-100 dark:bg-red-950"
-                        : alert.severity === "medium"
-                        ? "bg-yellow-100 dark:bg-yellow-950"
-                        : "bg-blue-100 dark:bg-blue-950"
-                    }`}
+                    key={alert.id}
+                    className="flex items-start gap-4 py-3 border-b last:border-0"
                   >
-                    <ShieldAlert
-                      className={`h-4 w-4 ${
-                        alert.severity === "high"
-                          ? "text-red-600 dark:text-red-400"
-                          : alert.severity === "medium"
-                          ? "text-yellow-600 dark:text-yellow-400"
-                          : "text-blue-600 dark:text-blue-400"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="font-medium">{alert.merchant}</div>
-                    <div className="text-sm text-muted-foreground">
-                      ${alert.amount.toFixed(2)}
+                    <div className={`p-2 rounded-lg ${severityColors.bg}`}>
+                      <AlertIcon className={`h-4 w-4 ${severityColors.text}`} />
                     </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="font-medium">{title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {alert.type === 'budget' 
+                          ? alert.reason?.split(':')[0] || 'Budget alert'
+                          : alert.amount 
+                            ? `$${Math.abs(alert.amount).toFixed(2)}`
+                            : alert.date
+                        }
+                      </div>
+                    </div>
+                    <Badge
+                      variant={severityColors.badge}
+                      className="text-xs capitalize"
+                    >
+                      {alert.severity}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={
-                      alert.severity === "high" ? "destructive" : "secondary"
-                    }
-                    className="text-xs capitalize"
-                  >
-                    {alert.severity}
-                  </Badge>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </Card>

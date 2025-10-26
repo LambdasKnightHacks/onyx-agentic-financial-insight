@@ -22,7 +22,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 })
     }
 
-    const transformedAccounts = accounts?.map(transformSupabaseAccountToAccount) || []
+    // Transform to ensure balance fields are numbers
+    const transformedAccounts = accounts?.map(account => ({
+      ...account,
+      balanceCurrent: Number(account.balance_current) || 0,
+      balanceAvailable: Number(account.balance_available) || 0,
+      balance_current: undefined,
+      balance_available: undefined
+    })) || []
 
     return NextResponse.json(transformedAccounts)
   } catch (error) {
