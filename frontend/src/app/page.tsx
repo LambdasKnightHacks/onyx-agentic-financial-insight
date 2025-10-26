@@ -19,7 +19,7 @@ export default function LandingPage() {
             />
             <div className="flex items-center gap-3">
               <Button variant="ghost" asChild>
-                <Link href="/login">Welcome Back</Link>
+                <Link href="/login">Sign In</Link>
               </Button>
               <Button asChild>
                 <Link href="/signup">Sign Up</Link>
@@ -63,7 +63,7 @@ export default function LandingPage() {
                     className="w-full sm:w-auto text-base bg-transparent"
                     asChild
                   >
-                    <Link href="/login">Log In</Link>
+                    <Link href="/login">Login</Link>
                   </Button>
                 </div>
 
