@@ -2,10 +2,13 @@ import { Button } from "@/src/components/ui/button";
 import { ArrowRight, Shield, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { OnyxIcon } from "@/src/components/logo";
+import { GL } from '@/src/components/gl'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <>
+    <GL className= "fixed inset-0 -z-10" />
+    <div className="min-h-screen flex flex-col ">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4 md:px-8 mx-auto">
@@ -132,5 +135,6 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+    </>
   );
 }

@@ -9,6 +9,8 @@ import { Card } from "@/src/components/ui/card"
 import { OnyxIcon } from "@/src/components/logo"
 import Link from "next/link"
 import { signup } from "@/src/lib/auth-actions"
+import { GL } from '@/src/components/gl'
+
 
 export default function SignUpForm() {
   const [loading, setLoading] = useState(false)
@@ -27,6 +29,9 @@ export default function SignUpForm() {
   }
 
   return (
+    <>
+    <GL className= "fixed inset-0 -z-10" />
+ 
     <div className="min-h-screen flex flex-col items-center justify-center p-2">
       <div className="w-full max-w-md space-y-20">
         <div className="text-center flex flex-col items-center ">
@@ -104,5 +109,7 @@ export default function SignUpForm() {
         </p>
       </div>
     </div>
+     </>
+    
   )
 }
