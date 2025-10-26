@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { usePlaidLink } from "react-plaid-link";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
 interface PlaidLinkButtonProps {

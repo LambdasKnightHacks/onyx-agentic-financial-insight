@@ -1,9 +1,9 @@
 "use client";
 
-import { ChatMessage as ChatMessageType } from "@/src/lib/types";
+import { ChatMessage as ChatMessageType } from "@/lib/types";
 import { ChatMessage } from "./ChatMessage";
 import { ChatTypingIndicator } from "./ChatTypingIndicator";
-import { useChatScroll } from "@/src/components/hooks/useChatScroll";
+import { useChatScroll } from "@/components/hooks/useChatScroll";
 
 interface ChatMessageListProps {
   messages: ChatMessageType[];

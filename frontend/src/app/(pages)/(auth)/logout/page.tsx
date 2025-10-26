@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/src/utils/supabase/client";
+import { createClient } from "@/utils/supabase/client";
 
 const LogoutPage = () => {
     const router = useRouter();

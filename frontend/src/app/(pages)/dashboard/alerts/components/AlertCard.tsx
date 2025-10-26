@@ -1,6 +1,6 @@
-import { Card } from "@/src/components/ui/card"
-import { Badge } from "@/src/components/ui/badge"
-import { Progress } from "@/src/components/ui/progress"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import type { Alert } from "../types"
 import { getAlertIcon, getAlertTitle, getAlertDescription, getSeverityColor } from "../utils"
 

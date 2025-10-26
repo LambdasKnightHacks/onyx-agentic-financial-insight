@@ -1,13 +1,13 @@
 "use client";
 
-import { ChartData } from "@/src/lib/types";
+import { ChartData } from "@/lib/types";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/src/components/ui/card";
+} from "@/components/ui/card";
 import {
   AreaChart,
   BarChart,
@@ -36,11 +36,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/src/components/ui/select";
-import { Slider } from "@/src/components/ui/slider";
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { BudgetManagerCard, BudgetFormData } from "./BudgetManagerCard";
-import { sendChatMessage } from "@/src/lib/chat-api";
-import { useAuth } from "@/src/components/auth-context";
+import { sendChatMessage } from "@/lib/chat-api";
+import { useAuth } from "@/components/auth-context";
 
 interface ChatChartRendererProps {
   chartData: ChartData;

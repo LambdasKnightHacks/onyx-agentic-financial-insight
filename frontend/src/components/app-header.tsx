@@ -1,9 +1,9 @@
 "use client";
 
-import { cn } from "@/src/lib/utils";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { RefreshCw, User, LogOut } from "lucide-react";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +11,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
-import { Badge } from "@/src/components/ui/badge";
-import { useAuth } from "@/src/components/auth-context";
-import { signout } from "@/src/lib/auth-actions";
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/components/auth-context";
+import { signout } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
 
 export function AppHeader() {
@@ -36,10 +36,9 @@ export function AppHeader() {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-64 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-6">
+    <header className="fixed top-0 right-0 left-64 z-50 flex h-16 items-center gap-4 border-b border-border bg-background px-6">
       <div className="flex flex-1 items-center gap-4">
-        <div className="relative w-full max-w-md">
-        </div>
+        <div className="relative w-full max-w-md"></div>
       </div>
       <div className="flex items-center gap-4">
         <Badge variant="secondary" className="text-xs">

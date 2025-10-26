@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/src/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Activity } from "lucide-react";
-import type { Transaction, Account } from "@/src/lib/types";
-import { useWebSocket } from "@/src/components/hooks/useWebSocket";
-import { useAuth } from "@/src/components/auth-context";
+import type { Transaction, Account } from "@/lib/types";
+import { useWebSocket } from "@/components/hooks/useWebSocket";
+import { useAuth } from "@/components/auth-context";
 import { TransactionDetailsSheet, LiveAnalysisPanel, TestTransactionButton, SimulateIncomeButton, TransactionFilters, TransactionList } from "./components";
 
 export default function TransactionsPage() {

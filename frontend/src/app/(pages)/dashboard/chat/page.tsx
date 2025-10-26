@@ -1,8 +1,8 @@
 "use client";
 
-import { ChatInterface } from "@/src/components/chat/ChatInterface";
-import { useAuth } from "@/src/components/auth-context";
-import { Skeleton } from "@/src/components/ui/skeleton";
+import { ChatInterface } from "@/components/chat/ChatInterface";
+import { useAuth } from "@/components/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ChatPage() {
   const { user, loading } = useAuth();

@@ -1,7 +1,7 @@
 import type React from "react";
-import { AppSidebar } from "@/src/components/app-sidebar";
-import { AppHeader } from "@/src/components/app-header";
-import { ProtectedRoute } from "@/src/components/protected-route";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
+import { ProtectedRoute } from "@/components/protected-route";
 
 export default function DashboardLayout({
   children,

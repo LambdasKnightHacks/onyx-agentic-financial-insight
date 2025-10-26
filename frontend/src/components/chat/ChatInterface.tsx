@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/src/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
 import { ChatEmptyState } from "./ChatEmptyState";
-import { useChatSession } from "@/src/components/hooks/useChatSession";
+import { useChatSession } from "@/components/hooks/useChatSession";
 
 interface ChatInterfaceProps {
   userId: string;

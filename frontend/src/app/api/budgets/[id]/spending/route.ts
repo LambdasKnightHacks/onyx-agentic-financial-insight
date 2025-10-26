@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/src/lib/supabase"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
-import { calculatePeriodDates } from "@/src/lib/budget-checker"
+import { supabaseAdmin } from "@/lib/supabase"
+import { getUserIdFromRequest } from "@/lib/auth-utils"
+import { calculatePeriodDates } from "@/lib/budget-checker"
 
 // returns specific details for a budget
 export async function GET(

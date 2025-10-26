@@ -1,9 +1,9 @@
 "use client";
 
-import { ChatMessage as ChatMessageType } from "@/src/lib/types";
-import { Avatar, AvatarFallback } from "@/src/components/ui/avatar";
+import { ChatMessage as ChatMessageType } from "@/lib/types";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, User, AlertCircle, Check, Clock } from "lucide-react";
-import { cn } from "@/src/lib/utils";
+import { cn } from "@/lib/utils";
 import { ChatChartRenderer } from "./ChatChartRenderer";
 
 interface ChatMessageProps {

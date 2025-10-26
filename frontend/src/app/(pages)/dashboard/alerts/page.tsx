@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Sheet } from "@/src/components/ui/sheet"
-import { Pagination } from "@/src/components/ui/pagination"
+import { Sheet } from "@/components/ui/sheet"
+import { Pagination } from "@/components/ui/pagination"
 import type { Alert } from "./types"
 import { useAlerts } from "./hooks/useAlerts"
 import { AlertCard } from "./components/AlertCard"

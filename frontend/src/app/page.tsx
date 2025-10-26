@@ -1,8 +1,8 @@
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { OnyxIcon } from "@/src/components/logo";
-import { GL } from "@/src/components/gl";
+import { OnyxIcon } from "@/components/logo";
+import { GL } from "@/components/gl";
 
 export default function LandingPage() {
   return (

@@ -2,8 +2,8 @@
 
 import React from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import type { Transaction } from "@/src/lib/types";
-import { Skeleton } from "@/src/components/ui/skeleton";
+import type { Transaction } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type SpendingOverTimeDatum = {
   name: string;

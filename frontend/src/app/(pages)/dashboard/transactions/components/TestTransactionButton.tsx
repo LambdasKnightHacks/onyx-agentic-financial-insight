@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import type { Account, Transaction } from "@/src/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 
 interface TestTransactionButtonProps {
   isConnected: boolean;

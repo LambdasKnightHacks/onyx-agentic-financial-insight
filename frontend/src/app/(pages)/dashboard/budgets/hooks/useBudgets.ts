@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { Budget } from '@/src/lib/types'
+import type { Budget } from '@/lib/types'
 import type { BudgetSpending, BudgetFormData } from '../types'
 
 export function useBudgets() {

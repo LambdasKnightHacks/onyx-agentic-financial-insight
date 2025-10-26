@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/src/lib/supabase"
-import { transformSupabaseAccountToAccount } from "@/src/types/database-types"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
+import { supabaseAdmin } from "@/lib/supabase"
+import { transformSupabaseAccountToAccount } from "@/types/database-types"
+import { getUserIdFromRequest } from "@/lib/auth-utils"
 
 export async function GET(request: NextRequest) {
   try {

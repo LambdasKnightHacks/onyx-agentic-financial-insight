@@ -11,10 +11,10 @@ import {
   Settings,
   BarChart3,
   MessageCircle,
+  TrendingUp,
 } from "lucide-react";
-import { cn } from "@/src/lib/utils";
-import { OnyxIcon } from "@/src/components/logo";
-
+import { cn } from "@/lib/utils";
+import { OnyxIcon } from "@/components/logo";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -25,6 +25,7 @@ const navItems = [
     label: "Transactions",
     icon: ArrowLeftRight,
   },
+  { href: "/dashboard/decisions", label: "Decisions", icon: TrendingUp },
   { href: "/dashboard/insights", label: "Insights", icon: Lightbulb },
   { href: "/dashboard/alerts", label: "Alerts", icon: ShieldAlert },
   { href: "/dashboard/budgets", label: "Budgets", icon: DollarSign },
@@ -36,9 +37,13 @@ export function AppSidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
-      <div className="flex h-16 items-center border-b border-sidebar-border px-6">
+      <div className="flex h-16 items-center px-6">
         <Link href="/" className="flex items-center gap-3">
-          <OnyxIcon size={170} className="text-primary-foreground pt-5" priority />
+          <OnyxIcon
+            size={170}
+            className="text-primary-foreground pt-5"
+            priority
+          />
         </Link>
       </div>
       <nav className="space-y-1 p-4">

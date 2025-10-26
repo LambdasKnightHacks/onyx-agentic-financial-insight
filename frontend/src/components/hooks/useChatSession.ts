@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { ChatMessage, ChatResponse } from "@/src/lib/types";
-import { sendChatMessage } from "@/src/lib/chat-api";
+import { ChatMessage, ChatResponse } from "@/lib/types";
+import { sendChatMessage } from "@/lib/chat-api";
 
 function uuidv4(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {

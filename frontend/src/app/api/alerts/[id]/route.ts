@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/src/lib/supabase"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
+import { supabaseAdmin } from "@/lib/supabase"
+import { getUserIdFromRequest } from "@/lib/auth-utils"
 
 // resolve and delete alert for a user
 export async function PATCH(

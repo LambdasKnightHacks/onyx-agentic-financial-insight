@@ -7,19 +7,19 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
-import { Button } from "@/src/components/ui/button";
-import { Progress } from "@/src/components/ui/progress";
-import { Skeleton } from "@/src/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/src/components/ui/alert";
-import { Pagination } from "@/src/components/ui/pagination";
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/src/components/ui/accordion";
+} from "@/components/ui/accordion";
 import {
   TrendingUp,
   TrendingDown,
@@ -30,8 +30,8 @@ import {
   ArrowRight,
   AlertTriangle,
 } from "lucide-react";
-import type { Insight } from "@/src/lib/types";
-import { useAuth } from "@/src/components/auth-context";
+import type { Insight } from "@/lib/types";
+import { useAuth } from "@/components/auth-context";
 
 const INSIGHTS_PER_PAGE = 6;
 

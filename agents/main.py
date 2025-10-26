@@ -10,6 +10,10 @@ from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 from google.adk.runners import Runner
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+# ✅ CRITICAL: Load environment variables from .env file
+load_dotenv()
 
 # WebSocket imports (organized)
 from websocket.manager import websocket_manager
@@ -18,6 +22,10 @@ from websocket.publisher import websocket_publisher
 from transaction_agent.agent import root_agent
 from chat_agent.agent import create_user_agent
 from financial_summary import generate_financial_summary, store_summary, get_latest_summary, should_regenerate_summary
+
+# Decision Agent imports
+from decision_agent.runner import initialize_runner, get_runner
+from decision_agent.tools.database import create_decision_analysis
 
 app = FastAPI()
 
@@ -70,6 +78,21 @@ class FinancialSummaryResponse(BaseModel):
     summary: Dict[str, Any] | None = None
     message: str
     generated_at: str
+
+class DecisionAnalysisRequest(BaseModel):
+    user_id: str
+    session_id: str | None = None
+    decision_type: str
+    decision_inputs: Dict[str, Any]
+    preferences: Dict[str, Any] = {}
+    constraints: Dict[str, Any] = {}
+
+class DecisionAnalysisResponse(BaseModel):
+    status: str
+    session_id: str
+    analysis_id: str
+    message: str
+    websocket_url: str
 
 @app.post("/api/transaction/analyze", response_model=TransactionResponse)
 async def analyze_transaction(request: TransactionRequest):
@@ -766,3 +789,207 @@ async def run_agent_pipeline_with_websocket(session_id: str, user_id: str, trans
 @app.post("/")
 async def root():
     return {"message": "Transaction Analysis API", "version": "1.0.0"}
+
+
+# ============================================================================
+# DECISION ANALYSIS ENDPOINTS
+# ============================================================================
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize decision runner on startup"""
+    try:
+        initialize_runner(websocket_manager)
+        print("✅ Decision analysis runner initialized")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to initialize decision runner: {e}")
+
+
+@app.post("/api/decisions/analyze", response_model=DecisionAnalysisResponse)
+async def analyze_decision(request: DecisionAnalysisRequest):
+    """
+    Start decision analysis (returns immediately, results via WebSocket)
+    
+    Example request for car lease vs finance:
+    {
+      "user_id": "uuid",
+      "session_id": "uuid",  # optional, will be generated if not provided
+      "decision_type": "car_lease_vs_finance",
+      "decision_inputs": {
+        "lease_option": {
+          "monthly_payment": 389,
+          "down_payment": 2000,
+          "lease_term_months": 36,
+          "mileage_cap": 12000,
+          "acquisition_fee": 595,
+          "disposition_fee": 395,
+          "insurance_monthly": 120,
+          "fuel_monthly": 80,
+          "maintenance_monthly": 25
+        },
+        "finance_option": {
+          "purchase_price": 32000,
+          "down_payment": 3000,
+          "apr": 0.049,
+          "loan_term_months": 60,
+          "insurance_monthly": 140,
+          "fuel_monthly": 80,
+          "maintenance_monthly": 50
+        },
+        "tenure_months": 36
+      },
+      "preferences": {
+        "max_acceptable_payment": 500,
+        "risk_tolerance": "medium"
+      },
+      "constraints": {
+        "min_emergency_fund_months": 3
+      }
+    }
+    """
+    try:
+        # Generate session ID if not provided
+        session_id = request.session_id or str(uuid.uuid4())
+        print(f"[API] Starting decision analysis for user {request.user_id}, session {session_id}")
+        
+        # Create decision analysis record in database
+        print(f"[API] Creating decision analysis record...")
+        analysis_id = await create_decision_analysis(
+            user_id=request.user_id,
+            session_id=session_id,
+            decision_type=request.decision_type,
+            input_data={
+                "decision_inputs": request.decision_inputs,
+                "preferences": request.preferences,
+                "constraints": request.constraints
+            }
+        )
+        print(f"[API] Analysis record created with ID: {analysis_id}")
+        
+        # Start analysis in background with error handling
+        runner = get_runner()
+        print(f"[API] Got runner, creating background task...")
+        
+        async def run_with_error_handling():
+            try:
+                print(f"[API] Background task started for analysis {analysis_id}")
+                await runner.run_analysis(
+                    analysis_id=analysis_id,
+                    user_id=request.user_id,
+                    session_id=session_id,
+                    decision_type=request.decision_type,
+                    decision_inputs=request.decision_inputs,
+                    preferences=request.preferences,
+                    constraints=request.constraints
+                )
+                print(f"[API] Background task completed for analysis {analysis_id}")
+            except Exception as e:
+                print(f"[API ERROR] Background task failed: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        task = asyncio.create_task(run_with_error_handling())
+        print(f"[API] Background task created: {task}")
+        
+        return DecisionAnalysisResponse(
+            status="started",
+            session_id=session_id,
+            analysis_id=analysis_id,
+            message="Decision analysis started. Connect to WebSocket for real-time updates.",
+            websocket_url=f"ws://localhost:8000/ws/decisions/{session_id}"
+        )
+    
+    except Exception as e:
+        print(f"[API ERROR] Error starting decision analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+
+@app.get("/api/decisions/history/{user_id}")
+async def get_decision_history(user_id: str, limit: int = 10):
+    """Get user's past decision analyses"""
+    from decision_agent.tools.database import get_user_decision_history
+    
+    try:
+        history = await get_user_decision_history(user_id, limit)
+        return {"status": "success", "data": history}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/decisions/{analysis_id}")
+async def get_decision_analysis(analysis_id: str):
+    """Get specific decision analysis"""
+    from decision_agent.tools.database import get_decision_analysis
+    
+    try:
+        analysis = await get_decision_analysis(analysis_id)
+        if analysis:
+            return {"status": "success", "data": analysis}
+        else:
+            return {"status": "error", "message": "Analysis not found"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/decisions/{analysis_id}/apply-recommendation")
+async def apply_budget_recommendation(
+    analysis_id: str,
+    recommendation_id: str,
+    user_id: str
+):
+    """Apply a budget recommendation (create actual budget)"""
+    from decision_agent.tools.database import apply_recommendation
+    
+    try:
+        result = await apply_recommendation(recommendation_id, user_id)
+        return result
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ============================================================================
+# DECISION ANALYSIS WEBSOCKET
+# ============================================================================
+
+@app.websocket("/ws/decisions/{session_id}")
+async def decision_websocket_endpoint(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for real-time decision analysis updates
+    
+    Streams progress as the 7-agent pipeline executes.
+    """
+    print(f"[DECISION WS] Connection attempt for session: {session_id}")
+    
+    # Accept the WebSocket connection FIRST
+    await websocket.accept()
+    print(f"[DECISION WS] WebSocket accepted for session: {session_id}")
+    
+    # Register this session_id connection using the session-specific method
+    await websocket_manager.connect_session(websocket, session_id)
+    print(f"[DECISION WS] Session registered: {session_id}")
+    
+    try:
+        # Keep connection open and listen for any client messages
+        while True:
+            try:
+                # Accept any messages from client (like keepalive pings)
+                data = await websocket.receive_text()
+                print(f"[DECISION WS] Received message from client: {data}")
+                
+                # Echo back or handle specific commands if needed
+                if data == "ping":
+                    await websocket.send_json({"type": "pong"})
+                    
+            except WebSocketDisconnect:
+                print(f"[DECISION WS] Client disconnected: {session_id}")
+                break
+            except Exception as e:
+                print(f"[DECISION WS] Error: {e}")
+                break
+                
+    finally:
+        # Properly disconnect the session
+        print(f"[DECISION WS] Cleaning up session: {session_id}")
+        websocket_manager.disconnect_session(session_id)
