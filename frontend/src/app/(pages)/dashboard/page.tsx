@@ -22,17 +22,19 @@ export default function DashboardPage() {
   const [insights, setInsights] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [netWorthChange, setNetWorthChange] = useState<number>(0);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes] =
+        const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes, allTransactionsRes] =
           await Promise.all([
             fetch("/api/accounts"),
-            fetch("/api/transactions?"),
-            fetch("/api/alerts?status=active"),
+            fetch("/api/transactions?limit=3"),
+            fetch("/api/alerts?status=active&limit=3"),
             fetch("/api/insights?"),
-            fetch("/api/budgets?")
+            fetch("/api/budgets?"),
+            fetch("/api/transactions") // Fetch all transactions for net worth calculation
           ]);
 
         const accountsData = await accountsRes.json();
@@ -40,19 +42,60 @@ export default function DashboardPage() {
         const alertsData = await alertsRes.json();
         const insightsData = await insightsRes.json();
         const budgetsData = await budgetsRes.json();
+        const allTransactionsData = await allTransactionsRes.json();
 
         // Handle error responses
         setAccounts(Array.isArray(accountsData) ? accountsData : []);
         setRecentTransactions(
-          Array.isArray(transactionsData) ? transactionsData : []
+          Array.isArray(transactionsData) ? transactionsData.slice(0, 3) : []
         );
-        setAlerts(Array.isArray(alertsData) ? alertsData : []);
+        setAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 3) : []);
         setInsights(
           Array.isArray(insightsData) ? insightsData : []
         );
         setBudgets(
           Array.isArray(budgetsData) ? budgetsData : []
         );
+
+        // Calculate net worth change based on last 30 days of transactions
+        if (Array.isArray(allTransactionsData) && allTransactionsData.length > 0) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          // Filter transactions from last 30 days
+          const recentTxns = allTransactionsData.filter((txn: Transaction) => {
+            const txnDate = new Date(txn.date);
+            return txnDate >= thirtyDaysAgo;
+          });
+
+          // Calculate net change 
+          // Negative amounts are expenses, positive are income
+          const netChange = recentTxns.reduce((sum: number, txn: Transaction) => {
+            return sum - txn.amount; // Subtract because in Plaid, positive amounts are expenses
+          }, 0);
+
+          // Calculate current net worth
+          const currentNetWorth = Array.isArray(accountsData) 
+            ? accountsData.reduce((sum: number, acc: Account) => sum + acc.balanceCurrent, 0)
+            : 0;
+
+          // Calculate percentage change
+          // Previous net worth 
+          const previousNetWorth = currentNetWorth - netChange;
+          
+          // Calculate percentage
+          // Works for both positive and negative net worth
+          if (Math.abs(previousNetWorth) > 0.01) {
+            const percentChange = (netChange / Math.abs(previousNetWorth)) * 100;
+            setNetWorthChange(parseFloat(percentChange.toFixed(1)));
+          } else if (Math.abs(currentNetWorth) > 0.01 && netChange !== 0) {
+            // If previous net worth was near zero but current isn't, use current as base
+            const percentChange = (netChange / Math.abs(currentNetWorth)) * 100;
+            setNetWorthChange(parseFloat(percentChange.toFixed(1)));
+          } else {
+            setNetWorthChange(0);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
       } finally {
@@ -64,7 +107,6 @@ export default function DashboardPage() {
   }, []);
 
   const netWorth = accounts.reduce((sum, acc) => sum + acc.balanceCurrent, 0);
-  const netWorthChange = 8.4;
 
   if (loading) {
     return (
@@ -204,7 +246,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-2xl font-bold">
                       $
-                      {Math.abs(account.balanceCurrent).toLocaleString(
+                      {account.balanceCurrent.toLocaleString(
                         "en-US",
                         { minimumFractionDigits: 2 }
                       )}
@@ -248,7 +290,7 @@ export default function DashboardPage() {
                   <ShieldAlert className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Alerts</h3>
+                  <h3 className="font-semibold">Recent Alerts</h3>
                   <p className="text-2xl font-bold mt-1">
                     {alerts.length}
                   </p>
@@ -321,7 +363,7 @@ export default function DashboardPage() {
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Alerts</h2>
+            <h2 className="text-xl font-semibold">Recent Alerts</h2>
             <Button variant="ghost" size="sm" asChild>
               <a href="/dashboard/alerts">View all</a>
             </Button>

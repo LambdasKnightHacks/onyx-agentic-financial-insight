@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -25,32 +26,55 @@ export function LiveAnalysisPanel({
   targetAgents,
   onClose,
 }: LiveAnalysisPanelProps) {
+  const [isDelaying, setIsDelaying] = useState(false);
+  const [prevShowAnalysis, setPrevShowAnalysis] = useState(false);
+
+  // Add a minimum delay to show the loading animation every time panel appears
+  useEffect(() => {
+    // Detect when showAnalysis changes from false to true (new analysis starting)
+    if (showAnalysis && !prevShowAnalysis) {
+      setIsDelaying(true);
+      const timer = setTimeout(() => {
+        setIsDelaying(false);
+      }, 600); // 600ms delay to see the loading animation
+      
+      return () => clearTimeout(timer);
+    }
+    
+    // Update previous state
+    setPrevShowAnalysis(showAnalysis);
+  }, [showAnalysis, prevShowAnalysis]);
+
   if (!showAnalysis) return null;
+
+  const hasResults = Object.keys(agentResults).length > 0 || Object.keys(lastAnalysisResults).length > 0;
+  const isPreparing = (showAnalysis && !isAnalyzing && !hasResults) || isDelaying;
+  const isComplete = !isAnalyzing && hasResults && !isDelaying;
 
   return (
     <Card
       className={`overflow-hidden transition-all duration-500 ${
-        isAnalyzing
+        isAnalyzing || isPreparing
           ? "border-primary/30 bg-linear-to-br from-primary/5 via-primary/3 to-background"
           : "border-green-500/30 bg-linear-to-br from-green-50/50 via-background to-background"
       }`}
     >
       <div
         className={`h-1 ${
-          isAnalyzing ? "bg-primary" : "bg-green-500"
+          isAnalyzing || isPreparing ? "bg-primary" : "bg-green-500"
         } transition-colors duration-500`}
       >
-        {isAnalyzing && <div className="h-full bg-primary/50 animate-pulse" />}
+        {(isAnalyzing || isPreparing) && <div className="h-full bg-primary/50 animate-pulse" />}
       </div>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
               className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                isAnalyzing ? "bg-primary/10" : "bg-green-500/10"
+                isAnalyzing || isPreparing ? "bg-primary/10" : "bg-green-500/10"
               }`}
             >
-              {isAnalyzing ? (
+              {isAnalyzing || isPreparing ? (
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               ) : (
                 <svg
@@ -71,16 +95,22 @@ export function LiveAnalysisPanel({
             </div>
             <div>
               <CardTitle className="text-lg">
-                {isAnalyzing ? "AI Analysis in Progress" : "Analysis Complete"}
+                {isPreparing 
+                  ? "Preparing Analysis..." 
+                  : isAnalyzing 
+                  ? "AI Analysis in Progress" 
+                  : "Analysis Complete"}
               </CardTitle>
               <CardDescription className="text-xs">
-                {isAnalyzing
+                {isPreparing
+                  ? "Connecting to AI agents..."
+                  : isAnalyzing
                   ? "Multiple agents processing your transaction"
                   : "All agents finished • Results ready"}
               </CardDescription>
             </div>
           </div>
-          {!isAnalyzing && (
+          {isComplete && (
             <Button
               variant="ghost"
               size="sm"
@@ -113,6 +143,7 @@ export function LiveAnalysisPanel({
               : lastAnalysisResults[agent.name];
             const isCompleted = !!result;
             const isProcessing = isAnalyzing && !isCompleted;
+            const isPreparing = !isAnalyzing && !isCompleted && !hasResults;
 
             return (
               <div
@@ -120,7 +151,7 @@ export function LiveAnalysisPanel({
                 className={`group relative p-4 rounded-xl border transition-all duration-300 ${
                   isCompleted
                     ? "border-green-500/30 bg-green-50/50 hover:border-green-500/50 hover:shadow-sm"
-                    : isProcessing
+                    : isProcessing || isPreparing
                     ? "border-primary/30 bg-primary/5 animate-pulse"
                     : "border-border bg-muted/30"
                 }`}
@@ -130,11 +161,11 @@ export function LiveAnalysisPanel({
                   <div className="text-xs font-medium text-foreground/90">
                     {agent.display}
                   </div>
-                  {isProcessing && (
+                  {(isProcessing || isPreparing) && (
                     <div className="flex items-center justify-center gap-1.5">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                       <span className="text-[10px] text-primary font-medium">
-                        Processing
+                        {isPreparing ? "Loading..." : "Processing"}
                       </span>
                     </div>
                   )}
@@ -175,7 +206,7 @@ export function LiveAnalysisPanel({
                       )}
                     </div>
                   )}
-                  {!isProcessing && !isCompleted && (
+                  {!isProcessing && !isCompleted && !isPreparing && (
                     <div className="text-[10px] text-muted-foreground">
                       Waiting...
                     </div>

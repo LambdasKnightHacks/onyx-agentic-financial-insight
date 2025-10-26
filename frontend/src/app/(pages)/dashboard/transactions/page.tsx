@@ -74,6 +74,12 @@ export default function TransactionsPage() {
     }
   }, [isAnalyzing, agentResults, showAnalysis]);
 
+  // Handler to show analysis panel immediately when test starts
+  const handleStartAnalysis = (transaction: any) => {
+    setShowAnalysis(true); // Show panel immediately for instant feedback
+    startAnalysis(transaction);
+  };
+
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
@@ -232,7 +238,7 @@ export default function TransactionsPage() {
         isConnected={isConnected}
         isAnalyzing={isAnalyzing}
         accounts={accounts}
-        onStartAnalysis={startAnalysis}
+        onStartAnalysis={handleStartAnalysis}
         onTransactionCreated={(txn) => setTransactions((prev) => [txn, ...prev])}
       />
 

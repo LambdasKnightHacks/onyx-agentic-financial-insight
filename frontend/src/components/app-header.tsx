@@ -2,17 +2,9 @@
 
 import { cn } from "@/src/lib/utils";
 import { useState } from "react";
-import { Search, RefreshCw, User, LogOut } from "lucide-react";
+import { RefreshCw, User, LogOut } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/src/components/ui/dropdown-menu";
 import { Badge } from "@/src/components/ui/badge";
 import { useAuth } from "@/src/components/auth-context";
 import { signout } from "@/src/lib/auth-actions";
@@ -64,7 +56,6 @@ export function AppHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>{user?.email || "My Account"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => router.push("/dashboard/settings")}
             >

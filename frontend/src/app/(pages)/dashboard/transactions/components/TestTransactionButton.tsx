@@ -49,7 +49,7 @@ export function TestTransactionButton({
         "Groceries",
       ][Math.floor(Math.random() * 6)],
       subcategory: "General",
-      account_id: accounts[0].id,
+      account_id: accounts[Math.floor(Math.random() * accounts.length)].id,
       location_city: "San Francisco",
       location_state: "CA",
       payment_channel: "online",

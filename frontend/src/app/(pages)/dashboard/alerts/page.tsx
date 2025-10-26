@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Sheet } from "@/src/components/ui/sheet"
+import { Pagination } from "@/src/components/ui/pagination"
 import type { Alert } from "./types"
 import { useAlerts } from "./hooks/useAlerts"
 import { AlertCard } from "./components/AlertCard"
@@ -10,10 +11,14 @@ import { ResolvedAlertCard } from "./components/ResolvedAlertCard"
 import { EmptyState } from "./components/EmptyState"
 import { AlertSkeleton } from "./components/AlertSkeleton"
 
+const ALERTS_PER_PAGE = 5
+
 export default function AlertsPage() {
   const { activeAlerts, resolvedAlerts, loading, resolveAlert, deleteAlert } = useAlerts()
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [activeAlertsPage, setActiveAlertsPage] = useState(1)
+  const [resolvedAlertsPage, setResolvedAlertsPage] = useState(1)
 
   const handleAlertClick = (alert: Alert) => {
     setSelectedAlert(alert)
@@ -25,6 +30,16 @@ export default function AlertsPage() {
     setSheetOpen(false)
     setSelectedAlert(null)
   }
+
+  // Pagination helper
+  const getPaginatedAlerts = (alerts: Alert[], page: number) => {
+    const startIndex = (page - 1) * ALERTS_PER_PAGE
+    const endIndex = startIndex + ALERTS_PER_PAGE
+    return alerts.slice(startIndex, endIndex)
+  }
+
+  const paginatedActiveAlerts = getPaginatedAlerts(activeAlerts, activeAlertsPage)
+  const paginatedResolvedAlerts = getPaginatedAlerts(resolvedAlerts, resolvedAlertsPage)
 
   if (loading) {
     return <AlertSkeleton />
@@ -46,7 +61,7 @@ export default function AlertsPage() {
       ) : (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Needs Review ({activeAlerts.length})</h2>
-          {activeAlerts.map((alert) => (
+          {paginatedActiveAlerts.map((alert) => (
             <Sheet key={alert.id} open={sheetOpen && selectedAlert?.id === alert.id} onOpenChange={setSheetOpen}>
               <AlertCard alert={alert} onClick={() => handleAlertClick(alert)} />
               <AlertDetailSheet
@@ -55,6 +70,13 @@ export default function AlertsPage() {
               />
             </Sheet>
           ))}
+          <Pagination
+            currentPage={activeAlertsPage}
+            totalItems={activeAlerts.length}
+            itemsPerPage={ALERTS_PER_PAGE}
+            onPageChange={setActiveAlertsPage}
+            itemLabel="alerts"
+          />
         </div>
       )}
 
@@ -62,13 +84,20 @@ export default function AlertsPage() {
       {resolvedAlerts.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Resolved ({resolvedAlerts.length})</h2>
-          {resolvedAlerts.map((alert) => (
+          {paginatedResolvedAlerts.map((alert) => (
             <ResolvedAlertCard
               key={alert.id}
               alert={alert}
               onDelete={deleteAlert}
             />
           ))}
+          <Pagination
+            currentPage={resolvedAlertsPage}
+            totalItems={resolvedAlerts.length}
+            itemsPerPage={ALERTS_PER_PAGE}
+            onPageChange={setResolvedAlertsPage}
+            itemLabel="alerts"
+          />
         </div>
       )}
     </div>
