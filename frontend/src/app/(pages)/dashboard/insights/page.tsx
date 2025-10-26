@@ -13,6 +13,7 @@ import { Button } from "@/src/components/ui/button";
 import { Progress } from "@/src/components/ui/progress";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
+import { Pagination } from "@/src/components/ui/pagination";
 import {
   Accordion,
   AccordionContent,
@@ -30,6 +31,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { Insight } from "@/src/lib/types";
+import { useAuth } from "@/src/components/auth-context";
+
+const INSIGHTS_PER_PAGE = 6;
 
 interface FinancialSummary {
   period: {
@@ -100,44 +104,66 @@ interface FinancialSummary {
 }
 
 export default function InsightsPage() {
+  const { user } = useAuth();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [financialSummary, setFinancialSummary] =
     useState<FinancialSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [insightsPage, setInsightsPage] = useState(1);
+
+  // Pagination helper for insights
+  const getPaginatedInsights = (items: Insight[], page: number) => {
+    const startIndex = (page - 1) * INSIGHTS_PER_PAGE;
+    const endIndex = startIndex + INSIGHTS_PER_PAGE;
+    return items.slice(startIndex, endIndex);
+  };
 
   // Fetch financial summary
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const user_id =
-          localStorage.getItem("user_id") ||
-          "bdd8ced0-6b8d-47e1-9c68-866c080994e8"; // fallback for demo
+        // Use authenticated user from session, not hardcoded demo
+        if (!user?.id) {
+          console.log("No authenticated user, skipping financial summary");
+          setSummaryLoading(false);
+          return;
+        }
 
         const response = await fetch("/api/financial-summary/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            user_id,
+            user_id: user.id,
             period_days: 30,
+            force_refresh: true, // Force regenerate
           }),
         });
 
         const data = await response.json();
 
+        console.log("Financial summary response:", data);
+
         if (data.status === "success" && data.summary) {
+          console.log("Setting financial summary:", data.summary);
           setFinancialSummary(data.summary);
+        } else {
+          console.error("Failed to get summary:", data.message || "Unknown error");
+          setError(data.message || "Failed to load financial summary");
         }
       } catch (err) {
         console.error("Error fetching financial summary:", err);
+        setError(err instanceof Error ? err.message : "Unknown error occurred");
       } finally {
         setSummaryLoading(false);
       }
     };
 
-    fetchSummary();
-  }, []);
+    if (user?.id) {
+      fetchSummary();
+    }
+  }, [user]);
 
   // Fetch insights
   useEffect(() => {
@@ -474,74 +500,89 @@ export default function InsightsPage() {
       </Card>
 
       {/* Insights Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {insights.map((insight) => (
-          <Card key={insight.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <CardTitle className="text-lg leading-tight">
-                    {insight.title}
-                  </CardTitle>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge
-                      variant={
-                        insight.metricDelta > 0 ? "destructive" : "default"
-                      }
-                      className="gap-1"
-                    >
-                      {insight.metricDelta > 0 ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3" />
-                      )}
-                      {Math.abs(insight.metricDelta * 100).toFixed(0)}%
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      vs 3-month avg
-                    </span>
+      <div>
+        <div className="grid gap-6 md:grid-cols-2 mb-6">
+          {getPaginatedInsights(insights, insightsPage).map((insight) => (
+            <Card key={insight.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg leading-tight">
+                      {insight.title}
+                    </CardTitle>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge
+                        variant={
+                          insight.metricDelta > 0 ? "destructive" : "default"
+                        }
+                        className="gap-1"
+                      >
+                        {insight.metricDelta > 0 ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {Math.abs(insight.metricDelta * 100).toFixed(0)}%
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        vs 3-month avg
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Confidence */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Confidence</span>
-                  <span className="font-medium">
-                    {(insight.confidence * 100).toFixed(0)}%
-                  </span>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Confidence */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Confidence</span>
+                    <span className="font-medium">
+                      {(insight.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <Progress value={insight.confidence * 100} className="h-2" />
                 </div>
-                <Progress value={insight.confidence * 100} className="h-2" />
-              </div>
 
-              {/* Why */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Why you're seeing this:</p>
-                <ul className="space-y-1">
-                  {insight.why.map((reason, idx) => (
-                    <li
-                      key={idx}
-                      className="text-sm text-muted-foreground flex items-start gap-2"
-                    >
-                      <span className="text-primary mt-0.5">•</span>
-                      <span>{reason}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                {/* Why */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Why you're seeing this:</p>
+                  <ul className="space-y-1">
+                    {insight.why.map((reason, idx) => (
+                      <li
+                        key={idx}
+                        className="text-sm text-muted-foreground flex items-start gap-2"
+                      >
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-              {/* CTA */}
-              {insight.cta && (
-                <Button className="w-full gap-2" variant="default">
-                  {insight.cta.label}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                {/* CTA */}
+                {insight.cta && (
+                  <Button className="w-full gap-2" variant="default">
+                    {insight.cta.label}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {insights.length > 0 && (
+          <div className="pt-4">
+            <Pagination
+              currentPage={insightsPage}
+              totalItems={insights.length}
+              itemsPerPage={INSIGHTS_PER_PAGE}
+              onPageChange={setInsightsPage}
+              itemLabel="insights"
+            />
+          </div>
+        )}
       </div>
 
       {/* Empty State */}

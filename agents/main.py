@@ -62,6 +62,7 @@ class ChatResponse(BaseModel):
 class FinancialSummaryRequest(BaseModel):
     user_id: str
     period_days: int = 30
+    force_refresh: bool = False
 
 class FinancialSummaryResponse(BaseModel):
     status: str
@@ -275,6 +276,10 @@ async def generate_and_store_financial_summary(request: FinancialSummaryRequest)
     try:
         # Check if we should regenerate (summary doesn't exist or is stale)
         should_regenerate = await should_regenerate_summary(request.user_id, max_age_hours=6)
+        
+        # Force refresh if requested
+        if request.force_refresh:
+            should_regenerate = True
         
         if not should_regenerate:
             # Return cached summary

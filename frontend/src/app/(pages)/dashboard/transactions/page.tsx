@@ -6,7 +6,7 @@ import { Activity } from "lucide-react";
 import type { Transaction, Account } from "@/src/lib/types";
 import { useWebSocket } from "@/src/components/hooks/useWebSocket";
 import { useAuth } from "@/src/components/auth-context";
-import { TransactionDetailsSheet, LiveAnalysisPanel, TestTransactionButton, TransactionFilters, TransactionList } from "./components";
+import { TransactionDetailsSheet, LiveAnalysisPanel, TestTransactionButton, SimulateIncomeButton, TransactionFilters, TransactionList } from "./components";
 
 export default function TransactionsPage() {
   const { user } = useAuth();
@@ -233,14 +233,23 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Test Transaction Button */}
-      <TestTransactionButton
-        isConnected={isConnected}
-        isAnalyzing={isAnalyzing}
-        accounts={accounts}
-        onStartAnalysis={handleStartAnalysis}
-        onTransactionCreated={(txn) => setTransactions((prev) => [txn, ...prev])}
-      />
+      {/* Test Transaction Buttons */}
+      <div className="space-y-4">
+        <TestTransactionButton
+          isConnected={isConnected}
+          isAnalyzing={isAnalyzing}
+          accounts={accounts}
+          onStartAnalysis={handleStartAnalysis}
+          onTransactionCreated={(txn) => setTransactions((prev) => [txn, ...prev])}
+        />
+        
+        <SimulateIncomeButton
+          isConnected={isConnected}
+          isAnalyzing={isAnalyzing}
+          accounts={accounts}
+          onTransactionCreated={(txn) => setTransactions((prev) => [txn, ...prev])}
+        />
+      </div>
 
       {/* Live Analysis Panel */}
       <LiveAnalysisPanel
