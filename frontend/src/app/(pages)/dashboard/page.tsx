@@ -5,15 +5,7 @@ import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import {
-  Banknote,
-  TrendingUp,
-  TrendingDown,
-  ShieldAlert,
-  Lightbulb,
-  Zap,
-  ExternalLink,
-} from "lucide-react";
+import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, Zap, ExternalLink } from "lucide-react";
 import type { Account, Transaction, FraudAlert } from "@/src/lib/types";
 import { PlaidLinkButton } from "@/src/components/plaid-link-button";
 import { useAuth } from "@/src/components/auth-context";

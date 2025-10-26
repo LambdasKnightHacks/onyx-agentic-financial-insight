@@ -4,10 +4,9 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Badge } from "@/src/components/ui/badge"
 import { Button } from "@/src/components/ui/button"
-import { Progress } from "@/src/components/ui/progress"
 import { Skeleton } from "@/src/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/src/components/ui/alert"
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Target, Lightbulb, ArrowRight } from "lucide-react"
+import { TrendingUp, TrendingDown, Calendar, Target, Lightbulb, ArrowRight } from "lucide-react"
 import type { Insight } from "@/src/lib/types"
 
 export default function InsightsPage() {
@@ -54,11 +53,22 @@ export default function InsightsPage() {
     )
   }
 
-  // Calculate summary metrics
-  const highConfidenceInsights = insights.filter((i) => i.confidence > 0.8)
-  const totalPotentialSavings = insights
-    .filter((i) => i.cta?.params?.amount)
-    .reduce((sum, i) => sum + (i.cta?.params?.amount || 0), 0)
+  // Generate simple summary
+  const generateSummary = () => {
+    if (insights.length === 0) {
+      return {
+        primary: "You don't have any insights yet. As you connect accounts and make transactions, our AI agents will analyze your spending patterns and provide personalized recommendations.",
+        secondary: "Connect a bank account to get started with AI-powered financial insights and recommendations."
+      }
+    }
+
+    return {
+      primary: `You have <strong class="text-primary">${insights.length} insight${insights.length === 1 ? '' : 's'}</strong> based on your recent activity.`,
+      secondary: `Focus on managing your expenses to stay on track with your financial goals.`
+    }
+  }
+
+  const summary = generateSummary()
 
   return (
     <div className="p-8 space-y-6">
@@ -77,43 +87,30 @@ export default function InsightsPage() {
             <div className="flex-1">
               <CardTitle className="text-xl">Your Financial Summary</CardTitle>
               <CardDescription className="mt-1.5 text-base leading-relaxed">
-                Based on your recent spending patterns and account activity, here's what you should focus on:
+                {insights.length > 0 
+                  ? "Based on your recent spending patterns and account activity, here's what you should focus on:"
+                  : "Get started with AI-powered financial insights"}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="text-foreground leading-relaxed">
-              You have{" "}
-              <strong className="text-primary">{highConfidenceInsights.length} high-priority recommendations</strong>{" "}
-              that could help optimize your finances. Your dining expenses are trending{" "}
-              {insights.find((i) => i.title.includes("dining"))?.metricDelta &&
-              insights.find((i) => i.title.includes("dining"))!.metricDelta > 0
-                ? "higher"
-                : "lower"}{" "}
-              than usual, and we've identified potential savings of{" "}
-              <strong className="text-success">${totalPotentialSavings.toFixed(2)}</strong> per month through
-              subscription optimization and fee reduction.
-            </p>
-            <p className="text-foreground leading-relaxed">
-              Consider setting up automated budgets for your top spending categories and reviewing your recurring
-              subscriptions. Small adjustments now can lead to significant savings over time.
-            </p>
+            <p className="text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: summary.primary }} />
+            <p className="text-foreground leading-relaxed">{summary.secondary}</p>
           </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Badge variant="secondary" className="gap-1.5">
-              <Target className="h-3 w-3" />
-              {insights.length} Total Insights
-            </Badge>
-            <Badge variant="secondary" className="gap-1.5">
-              <DollarSign className="h-3 w-3" />${totalPotentialSavings.toFixed(0)}/mo Potential Savings
-            </Badge>
-            <Badge variant="secondary" className="gap-1.5">
-              <Calendar className="h-3 w-3" />
-              Updated Today
-            </Badge>
-          </div>
+          {insights.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Badge variant="secondary" className="gap-1.5">
+                <Target className="h-3 w-3" />
+                {insights.length} Total Insights
+              </Badge>
+              <Badge variant="secondary" className="gap-1.5">
+                <Calendar className="h-3 w-3" />
+                Updated Today
+              </Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -140,28 +137,6 @@ export default function InsightsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Confidence */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Confidence</span>
-                  <span className="font-medium">{(insight.confidence * 100).toFixed(0)}%</span>
-                </div>
-                <Progress value={insight.confidence * 100} className="h-2" />
-              </div>
-
-              {/* Why */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Why you're seeing this:</p>
-                <ul className="space-y-1">
-                  {insight.why.map((reason, idx) => (
-                    <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <span className="text-primary mt-0.5">•</span>
-                      <span>{reason}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
               {/* CTA */}
               {insight.cta && (
                 <Button className="w-full gap-2" variant="default">
