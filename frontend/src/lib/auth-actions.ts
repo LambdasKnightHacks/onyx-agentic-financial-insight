@@ -28,7 +28,7 @@ export async function signup(formData: FormData) {
   const lastName = formData.get("last-name") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -52,21 +52,24 @@ export async function signup(formData: FormData) {
     redirect("/signup/check-email");
   }
 
-  // If we have a session, user is logged in (email confirmation disabled)
+  // If we have a session, user is logged in
   revalidatePath("/", "layout");
   redirect("/dashboard");
 }
 
 export async function signout() {
   const supabase = await createClient();
-  const { error } = await supabase.auth.signOut();
+  
+  // Revoke tokens globally
+  const { error } = await supabase.auth.signOut({ scope: 'global' });
+  
   if (error) {
     console.log(error);
     redirect("/error");
   }
 
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect("/");
 }
 
 export async function signInWithGoogle() {
@@ -77,7 +80,8 @@ export async function signInWithGoogle() {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       queryParams: {
         access_type: "offline",
-        prompt: "consent",
+        // Forces Google to show account picker every time
+        prompt: "select_account",
       },
     },
   });

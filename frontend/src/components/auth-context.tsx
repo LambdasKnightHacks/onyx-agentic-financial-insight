@@ -44,7 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
+      // Revoke tokens globally to invalidate refresh token
+      await supabase.auth.signOut({ scope: 'global' })
     } catch (error) {
       console.error('Error signing out:', error)
     }

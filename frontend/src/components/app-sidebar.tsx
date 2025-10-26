@@ -7,12 +7,13 @@ import {
   ArrowLeftRight,
   Lightbulb,
   ShieldAlert,
-  Zap,
-  Settings, BarChart3,
+  DollarSign,
+  Settings,
+  BarChart3,
   MessageCircle,
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
-import { OnyxIcon } from "@/src/components/logo"
+import { OnyxIcon } from "@/src/components/logo";
 
 
 const navItems = [
@@ -26,7 +27,7 @@ const navItems = [
   },
   { href: "/dashboard/insights", label: "Insights", icon: Lightbulb },
   { href: "/dashboard/alerts", label: "Alerts", icon: ShieldAlert },
-  { href: "/dashboard/automations", label: "Automations", icon: Zap },
+  { href: "/dashboard/budgets", label: "Budgets", icon: DollarSign },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
@@ -37,7 +38,7 @@ export function AppSidebar() {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
         <Link href="/" className="flex items-center gap-3">
-          <OnyxIcon size={250} className="text-primary-foreground pt-5" priority />
+          <OnyxIcon size={170} className="text-primary-foreground pt-5" priority />
         </Link>
       </div>
       <nav className="space-y-1 p-4">

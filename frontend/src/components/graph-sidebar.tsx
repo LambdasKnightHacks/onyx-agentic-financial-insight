@@ -1,19 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { Transaction } from "@/src/lib/types";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
@@ -32,6 +20,33 @@ type BudgetProgressDatum = {
   name: string;
   used: number;
   budget: number;
+};
+
+type Budget = {
+  id: string;
+  category: string;
+  subcategory?: string;
+  label?: string;
+  period: string;
+  cap_amount: number;
+  currency: string;
+  start_on: string;
+  is_active: boolean;
+};
+
+type BudgetSpending = {
+  budget_id: string;
+  category: string;
+  subcategory?: string;
+  label?: string;
+  period: string;
+  cap_amount: number;
+  spent: number;
+  remaining: number;
+  percentage: number;
+  is_exceeded: boolean;
+  period_start: string;
+  period_end: string;
 };
 
 const PIE_COLORS = ["#3b82f6", "#22c55e", "#f97316", "#a855f7", "#facc15", "#14b8a6"];
@@ -99,81 +114,43 @@ function computeCategoryBreakdown(transactions: Transaction[]): CategoryBreakdow
     .slice(0, 8);
 }
 
-function computeBudgetProgress(transactions: Transaction[]): BudgetProgressDatum[] {
-  if (transactions.length === 0) return [];
-
-  const now = new Date();
-  const currentKey = `${now.getFullYear()}-${now.getMonth()}`;
-
-  const perCategory = new Map<string, Map<string, number>>();
-
-  transactions.forEach((txn) => {
-    if (txn.amount >= 0) return;
-    const date = parseDate(txn.date);
-    if (!date) return;
-
-    const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-    const category = txn.category?.split("/")[0]?.trim() || "Uncategorized";
-
-    if (!perCategory.has(category)) {
-      perCategory.set(category, new Map());
-    }
-
-    const monthMap = perCategory.get(category)!;
-    monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + Math.abs(txn.amount));
-  });
-
-  const results: BudgetProgressDatum[] = [];
-
-  perCategory.forEach((months, category) => {
-    const currentSpend = months.get(currentKey) || 0;
-    if (currentSpend === 0) return;
-
-    const historicalEntries = Array.from(months.entries()).filter(
-      ([key]) => key !== currentKey,
-    );
-
-    const historicalTotal = historicalEntries.reduce(
-      (sum, [, value]) => sum + value,
-      0,
-    );
-
-    const historicalAvg =
-      historicalEntries.length > 0
-        ? historicalTotal / historicalEntries.length
-        : currentSpend;
-
-    const budget = Math.max(historicalAvg * 1.1, currentSpend * 1.2);
-
-    results.push({
-      name: category,
-      used: round(currentSpend),
-      budget: round(budget),
-    });
-  });
-
-  return results
-    .sort((a, b) => b.used - a.used)
-    .slice(0, 5);
+function convertSpendingToBudgetProgress(
+  budgetSpending: BudgetSpending[]
+): BudgetProgressDatum[] {
+  // Show ALL active budgets, same as budgets page
+  return budgetSpending.map((spending) => ({
+    name: spending.label || spending.category,
+    used: round(spending.spent),
+    budget: round(spending.cap_amount),
+  }));
 }
 
 export function useTransactionAnalytics() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [budgetSpending, setBudgetSpending] = React.useState<BudgetSpending[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchTransactions = React.useCallback(async () => {
+  const fetchData = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/transactions");
-      if (!response.ok) {
+      const [transactionsRes, budgetSpendingRes] = await Promise.all([
+        fetch("/api/transactions"),
+        fetch("/api/budgets/spending"),
+      ]);
+
+      if (!transactionsRes.ok) {
         throw new Error("Unable to load transactions");
       }
-      const data = await response.json();
-      setTransactions(Array.isArray(data) ? data : []);
+
+      const transactionsData = await transactionsRes.json();
+      const budgetSpendingData = budgetSpendingRes.ok ? await budgetSpendingRes.json() : [];
+
+      setTransactions(Array.isArray(transactionsData) ? transactionsData : []);
+      setBudgetSpending(Array.isArray(budgetSpendingData) ? budgetSpendingData : []);
     } catch (err) {
-      console.error("Failed to fetch transactions:", err);
+      console.error("Failed to fetch data:", err);
       setError(
         err instanceof Error ? err.message : "Something went wrong while fetching data",
       );
@@ -183,8 +160,8 @@ export function useTransactionAnalytics() {
   }, []);
 
   React.useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    fetchData();
+  }, [fetchData]);
 
   const spendingOverTimeData = React.useMemo(
     () => computeSpendingOverTime(transactions),
@@ -195,18 +172,19 @@ export function useTransactionAnalytics() {
     [transactions],
   );
   const budgetProgressData = React.useMemo(
-    () => computeBudgetProgress(transactions),
-    [transactions],
+    () => convertSpendingToBudgetProgress(budgetSpending),
+    [budgetSpending],
   );
 
   return {
     transactions,
+    budgetSpending,
     loading,
     error,
     spendingOverTimeData,
     categoryBreakdownData,
     budgetProgressData,
-    refresh: fetchTransactions,
+    refresh: fetchData,
   };
 }
 
@@ -292,7 +270,20 @@ function BudgetProgressBar({ name, used, budget }: BudgetProgressDatum) {
 
 export function BudgetProgressBars({ data }: { data: BudgetProgressDatum[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-muted-foreground">We need more spending history to model budgets.</p>;
+    return (
+      <div className="rounded-lg border border-dashed border-muted-foreground/30 p-6 text-center">
+        <p className="text-sm font-medium text-foreground mb-2">No active budgets</p>
+        <p className="text-sm text-muted-foreground mb-4">
+          Create budgets to track your spending goals by category
+        </p>
+        <a
+          href="/dashboard/budgets"
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          Set up budgets →
+        </a>
+      </div>
+    );
   }
 
   return (
