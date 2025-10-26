@@ -19,6 +19,7 @@ from google.adk.events import Event, EventActions
 from google.genai.types import Content, Part
 
 from ...a2a import a2a_client
+from ...a2a.a2a_client import a2a_client as a2a_client_instance
 from .tools import (
     detect_conflicts,
     build_consensus_from_responses,
@@ -53,6 +54,13 @@ class ConsensusAgent(BaseAgent):
             fraud_result = ctx.session.state.get("fraud_result", {})
             budget_result = ctx.session.state.get("budget_result", {})
             cashflow_result = ctx.session.state.get("cashflow_result", {})
+            
+            # Log A2A activity from previous agents
+            a2a_messages = a2a_client.get_message_history()
+            yield Event(
+                author=self.name,
+                content=Content(parts=[Part(text=f"Starting consensus building. Found {len(a2a_messages)} A2A messages already sent.")])
+            )
             
             # Step 2: Detect conflicts between agents
             conflicts = detect_conflicts(
