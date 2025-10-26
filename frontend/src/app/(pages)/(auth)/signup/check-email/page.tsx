@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { Card } from "@/src/components/ui/card"
 import { Button } from "@/src/components/ui/button"
-import { Mail, Sparkles } from "lucide-react"
+import { Mail } from "lucide-react"
+import { OnyxIcon } from "@/src/components/logo"
 
 export default function CheckEmailPage() {
   return (
@@ -10,7 +11,7 @@ export default function CheckEmailPage() {
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-8">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
+              <OnyxIcon size={28} className="text-primary-foreground" priority />
             </div>
             <span className="text-2xl font-bold">MyFinance</span>
           </Link>
@@ -48,4 +49,3 @@ export default function CheckEmailPage() {
     </div>
   )
 }
-

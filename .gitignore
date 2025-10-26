@@ -10,5 +10,7 @@ venv/
 *.log
 .DS_Store
 .vscode/
-
+node_modules/
+/vendor/
+/packages/
 agents/testing/*

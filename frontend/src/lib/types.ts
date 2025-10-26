@@ -1,6 +1,6 @@
 export type AccountType = "checking" | "savings" | "credit" | "loan";
 export type AccountStatus = "active" | "frozen" | "closed";
-export type TransactionStatus = "posted" | "pending";
+export type TransactionStatus = "posted" | "processed";
 export type AlertSeverity = "high" | "medium" | "low";
 export type AlertStatus = "new" | "ack" | "resolved";
 

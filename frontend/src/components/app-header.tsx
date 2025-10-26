@@ -12,15 +12,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
-import { Badge } from "@/src/components/ui/badge";
-import { useAuth } from "@/src/components/auth-context";
-import { signout } from "@/src/lib/auth-actions";
+} from "@/src/components/ui/dropdown-menu"
+import { Badge } from "@/src/components/ui/badge"
+import { useAuth } from "@/src/components/auth-context"
+import { signout } from "@/src/lib/auth-actions"
+
+import { useRouter } from "next/navigation"
+
 
 export function AppHeader() {
-  const [lastSync, setLastSync] = useState("2m ago");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const { user } = useAuth();
+  const router = useRouter()
+  const [lastSync, setLastSync] = useState("2m ago")
+  const [isSyncing, setIsSyncing] = useState(false)
+  const { user } = useAuth()
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -71,7 +75,7 @@ export function AppHeader() {
             <DropdownMenuLabel>{user?.email || "My Account"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut className="h-4 w-4 mr-2" />

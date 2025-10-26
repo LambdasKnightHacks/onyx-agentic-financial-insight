@@ -1,14 +1,10 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-
+import "dotenv/config"; // Ensures env variables are loaded
 import plaidRoutes from "./routes/plaidRoutes";
 
-// Load environment variables
-dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // Middleware
 app.use(cors());
@@ -42,11 +38,13 @@ app.use("*", (req: Request, res: Response) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Plaid Authentication API running on port ${PORT}`);
-  console.log(`Make sure to set up your .env file with Plaid credentials`);
-  console.log(`Visit http://localhost:${PORT} to test the API`);
-});
+// Start server only if running directly
+if (require.main === module) {
+  app.listen(PORT, "localhost", () => {
+    console.log(`Plaid Authentication API running on port ${PORT}`);
+    console.log(`Make sure to set up your .env file with Plaid credentials`);
+    console.log(`Visit http://localhost:${PORT} to test the API`);
+  });
+}
 
 export default app;

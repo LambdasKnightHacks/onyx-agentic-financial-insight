@@ -268,9 +268,7 @@ export default function TransactionsPage() {
                       const errorData = await response.json();
                       console.error("Failed to create transaction:", errorData);
                       alert(
-                        `Failed to create transaction: ${
-                          errorData.error || "Unknown error"
-                        }`
+                        `Failed to create transaction: ${errorData.error || "Unknown error"}`
                       );
                       return;
                     }
@@ -541,6 +539,7 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
 
+      
       <div className="space-y-6">
         {Object.entries(groupedTransactions).map(([accountId, txns]) => {
           const account = getAccountById(accountId);
@@ -607,7 +606,9 @@ export default function TransactionsPage() {
                       <div className="text-right ml-4">
                         <p
                           className={`font-semibold ${
-                            txn.amount > 0 ? "text-green-500" : "text-red-500"
+                            txn.amount > 0
+                              ? "text-green-500"
+                              : "text-red-500"
                           }`}
                         >
                           {txn.amount > 0 ? "+" : "-"}$

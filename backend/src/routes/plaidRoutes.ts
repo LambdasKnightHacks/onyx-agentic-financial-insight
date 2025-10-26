@@ -9,4 +9,10 @@ router.post("/exchange-token", plaidController.exchangeToken);
 router.post("/accounts", plaidController.getAccounts);
 router.post("/auth", plaidController.getAuthData);
 
+// New routes from plan
+router.post("/connect-bank", plaidController.connectBank);
+router.post("/webhook", plaidController.webhook);
+router.get("/status", plaidController.getStatus);
+router.post("/sync", plaidController.syncTransactions);
+
 export default router;
