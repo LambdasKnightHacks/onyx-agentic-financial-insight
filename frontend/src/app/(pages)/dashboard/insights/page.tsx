@@ -61,14 +61,14 @@ export default function InsightsPage() {
     .reduce((sum, i) => sum + (i.cta?.params?.amount || 0), 0)
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="px-8 pb-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
         <p className="text-muted-foreground mt-1">AI-powered recommendations to help you manage your finances better</p>
       </div>
 
       {/* Summary Box */}
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+      <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-primary/10">
         <CardHeader>
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
