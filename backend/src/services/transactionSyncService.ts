@@ -83,10 +83,19 @@ class TransactionSyncService {
     let updatedCount = 0;
 
     for (const tx of transactions) {
+      // Add a safety check for the transaction object itself
+      if (!tx) {
+        console.warn("Skipping null/undefined transaction object from Plaid.");
+        continue;
+      }
       const transactionData = await this.transformTransaction(userId, tx);
 
+      if (!transactionData) {
+        continue; // Skip this transaction
+      }
+
       const { data, error } = await supabase
-        .from("plaid_transactions")
+        .from("transactions") // Corrected table name
         .upsert(transactionData, {
           onConflict: "plaid_transaction_id",
         })
@@ -111,7 +120,7 @@ class TransactionSyncService {
     transactions: { transaction_id?: string }[]
   ): Promise<number> {
     const transactionIds = transactions
-      .map((t) => t.transaction_id)
+      .map((t) => t?.transaction_id)
       .filter(Boolean) as string[];
 
     if (transactionIds.length === 0) {
@@ -119,7 +128,7 @@ class TransactionSyncService {
     }
 
     const { error, count } = await supabase
-      .from("plaid_transactions")
+      .from("transactions") // Corrected table name
       .delete()
       .in("plaid_transaction_id", transactionIds);
 
@@ -136,9 +145,15 @@ class TransactionSyncService {
   private async transformTransaction(
     userId: string,
     tx: Transaction
-  ): Promise<Partial<PlaidTransaction>> {
+  ): Promise<Partial<PlaidTransaction> | null> {
+    // Expanded safety check
+    if (!tx || !tx.account_id) {
+      console.warn("Skipping transaction with no tx object or account_id:", tx);
+      return null;
+    }
+
     const { data: accountData } = await supabase
-      .from("plaid_accounts")
+      .from("accounts") // Corrected table name
       .select("id")
       .eq("plaid_account_id", tx.account_id)
       .single();

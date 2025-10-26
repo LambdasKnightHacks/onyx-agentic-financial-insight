@@ -58,7 +58,7 @@ export function PlaidLinkButton({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            publicToken: public_token,
+            public_token: public_token,
             metadata,
           }),
         });

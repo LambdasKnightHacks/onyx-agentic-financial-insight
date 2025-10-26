@@ -1,6 +1,10 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import "dotenv/config"; // Ensures env variables are loaded
+import dotenv from "dotenv";
+
+// Load environment variables from .env file in the src directory
+dotenv.config({ path: __dirname + "/.env" });
+
 import plaidRoutes from "./routes/plaidRoutes";
 
 const app = express();

@@ -20,6 +20,12 @@ jest.mock("../src/services/plaidService", () => ({
   }),
   getItem: jest.fn().mockResolvedValue({ user_id: MOCK_USER_ID }),
   handleItemError: jest.fn().mockResolvedValue(true),
+  getAccounts: jest.fn().mockResolvedValue({
+    data: {
+      accounts: [{ id: "mock-account-id-123", name: "Checking" }],
+    },
+  }),
+  saveAccounts: jest.fn().mockResolvedValue(true),
 }));
 
 // Mock TransactionSyncService

@@ -10,18 +10,25 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-        setAll(cookiesToSet) {
+        set(
+          name: string,
+          value: string,
+          options?: Parameters<typeof cookieStore.set>[2]
+        ) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookieStore.set(name, value, options);
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Ignored in Server Component contexts
+          }
+        },
+        remove(name: string, options?: Parameters<typeof cookieStore.set>[2]) {
+          try {
+            cookieStore.set(name, "", { ...(options || {}), maxAge: 0 });
+          } catch {
+            // Ignored in Server Component contexts
           }
         },
       },
@@ -41,21 +48,38 @@ export function createRouteHandlerClient(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
+        get(name: string) {
+          return request.cookies.get(name)?.value;
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
+        set(
+          name: string,
+          value: string,
+          options?: Parameters<typeof response.cookies.set>[2]
+        ) {
+          // set on request clone and propagate to response
+          try {
+            request.cookies.set(name, value);
+          } catch {}
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          try {
+            response.cookies.set(name, value, options);
+          } catch {}
+        },
+        remove(
+          name: string,
+          options?: Parameters<typeof response.cookies.set>[2]
+        ) {
+          try {
+            request.cookies.set(name, "");
+          } catch {}
+          response = NextResponse.next({
+            request: { headers: request.headers },
+          });
+          try {
+            response.cookies.set(name, "", { ...(options || {}), maxAge: 0 });
+          } catch {}
         },
       },
     }

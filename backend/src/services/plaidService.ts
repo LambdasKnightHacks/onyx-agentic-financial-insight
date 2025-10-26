@@ -18,6 +18,7 @@ import {
   PlaidTransaction,
 } from "../utils/database";
 import { encrypt, decrypt } from "../utils/encryption";
+import { v4 as uuidv4 } from "uuid";
 
 class PlaidService {
   private client: PlaidApi;
@@ -40,7 +41,11 @@ class PlaidService {
     );
   }
 
-  async createLinkToken(userId: string, webhookUrl?: string): Promise<any> {
+  async createLinkToken(
+    userId: string,
+    email: string,
+    webhookUrl?: string
+  ): Promise<any> {
     const request: LinkTokenCreateRequest = {
       user: { client_user_id: userId },
       client_name: "MyFinance",
@@ -48,7 +53,12 @@ class PlaidService {
       country_codes: [CountryCode.Us],
       language: "en",
       webhook: webhookUrl || process.env.WEBHOOK_URL,
+      user_token: undefined, // Explicitly undefined
     };
+
+    if (email) {
+      request.user.email_address = email;
+    }
     return await this.client.linkTokenCreate(request);
   }
 
@@ -224,6 +234,7 @@ class PlaidService {
 
       for (const account of accounts) {
         const accountData = {
+          id: uuidv4(), // Generate a new UUID for the account
           user_id: userId,
           name: account.name,
           type: account.type,

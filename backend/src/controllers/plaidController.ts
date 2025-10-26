@@ -6,7 +6,10 @@ class plaidController {
   // Create link token for Plaid Link initialization
   async createLinkToken(req: Request, res: Response): Promise<void> {
     try {
-      const { userId } = req.body;
+      const { userId, email } = req.body;
+
+      // Debug: incoming body
+      console.log("[backend] createLinkToken body:", { userId, email });
 
       if (!userId) {
         res.status(400).json({
@@ -15,7 +18,7 @@ class plaidController {
         return;
       }
 
-      const response = await plaidService.createLinkToken(userId);
+      const response = await plaidService.createLinkToken(userId, email);
 
       res.json({
         link_token: response.data.link_token,
@@ -115,22 +118,24 @@ class plaidController {
   // Completes the bank connection flow
   async connectBank(req: Request, res: Response): Promise<void> {
     try {
-      const { publicToken, userId, metadata } = req.body;
+      const { public_token, userId, institution_name, metadata } = req.body;
 
-      if (!publicToken || !userId) {
+      if (!public_token || !userId) {
         res.status(400).json({
-          error: "publicToken and userId are required",
+          error: "public_token and userId are required",
         });
         return;
       }
 
       // Extract institution info from metadata if available
       const institutionName =
-        metadata?.institution?.name || "Unknown Institution";
+        metadata?.institution?.name ||
+        institution_name ||
+        "Unknown Institution";
       const webhookUrl = process.env.WEBHOOK_URL;
 
       // Exchange public token for access token
-      const exchangeResponse = await plaidService.exchangeToken(publicToken);
+      const exchangeResponse = await plaidService.exchangeToken(public_token);
       const { access_token, item_id } = exchangeResponse.data;
 
       // Save access token to the database
@@ -149,7 +154,7 @@ class plaidController {
       // Save accounts to database
       const savedAccounts = await plaidService.saveAccounts(
         userId,
-        item_id,
+        plaidItem.item_id, // Use the item_id from the saved PlaidItem
         accounts
       );
 
@@ -274,14 +279,11 @@ class plaidController {
       }
 
       // Always return 200 to acknowledge receipt
-      res.status(200).json({ received: true });
+      res.status(200).send("Webhook received");
     } catch (error: any) {
       console.error("[Plaid Webhook Error]:", error);
       // Still return 200 to prevent Plaid from retrying
-      res.status(200).json({
-        received: true,
-        error: "Processing error - logged for review",
-      });
+      res.status(200).send("Webhook received");
     }
   }
 
@@ -309,7 +311,10 @@ class plaidController {
   // Manually triggers a transaction sync
   async syncTransactions(req: Request, res: Response): Promise<void> {
     try {
-      const { userId, itemId } = req.body;
+      const { userId: userIdBody, itemId } = req.body;
+      const { userId: userIdQuery } = req.query;
+
+      const userId = (userIdBody || userIdQuery) as string;
 
       if (!userId) {
         res.status(400).json({ error: "userId is required" });

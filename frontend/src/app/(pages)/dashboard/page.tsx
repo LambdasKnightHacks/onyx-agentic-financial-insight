@@ -5,7 +5,15 @@ import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, DollarSign, ExternalLink } from "lucide-react";
+import {
+  Banknote,
+  TrendingUp,
+  TrendingDown,
+  ShieldAlert,
+  Lightbulb,
+  DollarSign,
+  ExternalLink,
+} from "lucide-react";
 import type { Account, Transaction } from "@/src/lib/types";
 import type { Alert } from "./alerts/types";
 import { getAlertTitle, getAlertIcon, getSeverityColor } from "./alerts/utils";
@@ -26,14 +34,19 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes] =
-          await Promise.all([
-            fetch("/api/accounts"),
-            fetch("/api/transactions?"),
-            fetch("/api/alerts?status=active"),
-            fetch("/api/insights?"),
-            fetch("/api/budgets?")
-          ]);
+        const [
+          accountsRes,
+          transactionsRes,
+          alertsRes,
+          insightsRes,
+          budgetsRes,
+        ] = await Promise.all([
+          fetch("/api/accounts"),
+          fetch("/api/transactions?"),
+          fetch("/api/alerts?status=active"),
+          fetch("/api/insights?"),
+          fetch("/api/budgets?"),
+        ]);
 
         const accountsData = await accountsRes.json();
         const transactionsData = await transactionsRes.json();
@@ -47,12 +60,8 @@ export default function DashboardPage() {
           Array.isArray(transactionsData) ? transactionsData : []
         );
         setAlerts(Array.isArray(alertsData) ? alertsData : []);
-        setInsights(
-          Array.isArray(insightsData) ? insightsData : []
-        );
-        setBudgets(
-          Array.isArray(budgetsData) ? budgetsData : []
-        );
+        setInsights(Array.isArray(insightsData) ? insightsData : []);
+        setBudgets(Array.isArray(budgetsData) ? budgetsData : []);
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
       } finally {
@@ -249,9 +258,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold">Alerts</h3>
-                  <p className="text-2xl font-bold mt-1">
-                    {alerts.length}
-                  </p>
+                  <p className="text-2xl font-bold mt-1">{alerts.length}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     to review
                   </p>
@@ -337,10 +344,10 @@ export default function DashboardPage() {
               </div>
             ) : (
               alerts.map((alert) => {
-                const AlertIcon = getAlertIcon(alert.type)
-                const severityColors = getSeverityColor(alert.severity)
-                const title = getAlertTitle(alert)
-                
+                const AlertIcon = getAlertIcon(alert.type);
+                const severityColors = getSeverityColor(alert.severity);
+                const title = getAlertTitle(alert);
+
                 return (
                   <div
                     key={alert.id}
@@ -352,12 +359,11 @@ export default function DashboardPage() {
                     <div className="flex-1 space-y-1">
                       <div className="font-medium">{title}</div>
                       <div className="text-sm text-muted-foreground">
-                        {alert.type === 'budget' 
-                          ? alert.reason?.split(':')[0] || 'Budget alert'
-                          : alert.amount 
-                            ? `$${Math.abs(alert.amount).toFixed(2)}`
-                            : alert.date
-                        }
+                        {alert.type === "budget"
+                          ? alert.reason?.split(":")[0] || "Budget alert"
+                          : alert.amount
+                          ? `$${Math.abs(alert.amount).toFixed(2)}`
+                          : alert.date}
                       </div>
                     </div>
                     <Badge
@@ -367,7 +373,7 @@ export default function DashboardPage() {
                       {alert.severity}
                     </Badge>
                   </div>
-                )
+                );
               })
             )}
           </div>
