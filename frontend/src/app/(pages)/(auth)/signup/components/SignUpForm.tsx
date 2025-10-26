@@ -27,9 +27,9 @@ export default function SignUpForm() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center flex flex-col items-center gap-3">
+    <div className="min-h-screen flex flex-col items-center justify-center p-2">
+      <div className="w-full max-w-md space-y-20">
+        <div className="text-center flex flex-col items-center ">
           <Link href="/" className="inline-flex items-center">
               <OnyxIcon size={300} className="text-primary-foreground" priority />
           </Link>
@@ -39,11 +39,11 @@ export default function SignUpForm() {
 
         <Card className="p-5">
           {error && (
-            <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <div className="mb-5 p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               {error}
             </div>
           )}
-          <form action={handleSubmit} className="space-y-6">
+          <form action={handleSubmit} className="space-y-8">
             <div className="space-y-2">
               <Label htmlFor="first-name">First Name</Label>
               <Input
