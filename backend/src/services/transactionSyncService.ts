@@ -17,10 +17,11 @@ class TransactionSyncService {
       const accessToken = await plaidService.getAccessToken(userId, itemId);
 
       // Get current cursor from the database
+      // itemId here is the database UUID (plaid_items.id), not the Plaid item_id
       const { data: itemData, error: itemError } = await supabase
         .from("plaid_items")
         .select("cursor")
-        .eq("item_id", itemId)
+        .eq("id", itemId)
         .single();
 
       if (itemError) {
@@ -48,9 +49,18 @@ class TransactionSyncService {
       }
 
       // Process added and modified transactions
+      // Filter out any undefined/null transactions
+      const allTransactions = added
+        .concat(modified)
+        .filter((tx) => tx !== null && tx !== undefined);
+
+      console.log(
+        `[Transaction Sync] Processing ${allTransactions.length} transactions (${added.length} added, ${modified.length} modified)`
+      );
+
       const processedCount = await this.processTransactions(
         userId,
-        added.concat(modified)
+        allTransactions
       );
 
       // Process removed transactions
@@ -85,8 +95,22 @@ class TransactionSyncService {
     for (const tx of transactions) {
       const transactionData = await this.transformTransaction(userId, tx);
 
+      // Skip if transformation returned null (account not found)
+      if (!transactionData) {
+        continue;
+      }
+
+      // Check if transaction already exists to accurately track adds vs updates
+      const { data: existingTx } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("plaid_transaction_id", tx.transaction_id)
+        .single();
+
+      const isUpdate = !!existingTx;
+
       const { data, error } = await supabase
-        .from("plaid_transactions")
+        .from("transactions")
         .upsert(transactionData, {
           onConflict: "plaid_transaction_id",
         })
@@ -94,10 +118,28 @@ class TransactionSyncService {
 
       if (error) {
         console.error("Error upserting transaction:", error);
+        console.error("Transaction data:", {
+          plaid_transaction_id: transactionData.plaid_transaction_id,
+          merchant: transactionData.merchant_name,
+          amount: transactionData.amount,
+        });
       } else if (data) {
-        // This is a simplification; upsert doesn't tell us if it was an insert or update.
-        // For more accuracy, you might need to select before upserting.
-        updatedCount++;
+        if (isUpdate) {
+          updatedCount++;
+        } else {
+          addedCount++;
+          // Update account balance for newly added transactions
+          if (
+            transactionData.account_id &&
+            transactionData.amount !== undefined
+          ) {
+            await this.updateAccountBalance(
+              transactionData.account_id,
+              transactionData.amount,
+              transactionData.currency || "USD"
+            );
+          }
+        }
       }
     }
 
@@ -119,7 +161,7 @@ class TransactionSyncService {
     }
 
     const { error, count } = await supabase
-      .from("plaid_transactions")
+      .from("transactions")
       .delete()
       .in("plaid_transaction_id", transactionIds);
 
@@ -136,12 +178,23 @@ class TransactionSyncService {
   private async transformTransaction(
     userId: string,
     tx: Transaction
-  ): Promise<Partial<PlaidTransaction>> {
+  ): Promise<Partial<PlaidTransaction> | null> {
     const { data: accountData } = await supabase
-      .from("plaid_accounts")
+      .from("accounts")
       .select("id")
       .eq("plaid_account_id", tx.account_id)
       .single();
+
+    // If account not found, skip this transaction
+    if (!accountData) {
+      console.error(
+        `[Transaction Sync] Account not found for plaid_account_id: ${tx.account_id}`
+      );
+      console.error(
+        `[Transaction Sync] Skipping transaction: ${tx.transaction_id}`
+      );
+      return null;
+    }
 
     const hash = crypto
       .createHash("sha256")
@@ -150,29 +203,82 @@ class TransactionSyncService {
 
     return {
       user_id: userId,
-      account_id: accountData?.id || null,
+      account_id: accountData.id,
       plaid_transaction_id: tx.transaction_id,
       source: "plaid",
       posted_at: tx.date,
-      authorized_date: tx.authorized_date,
+      authorized_date: tx.authorized_date || null,
       amount: tx.amount,
-      currency: tx.iso_currency_code,
-      merchant_name: tx.merchant_name,
-      description: tx.name,
-      category: tx.category?.join(", "),
-      pending: tx.pending,
-      payment_channel: tx.payment_channel,
-      status: tx.pending ? "pending" : "posted",
-      location_city: tx.location.city,
-      location_state: tx.location.region,
-      geo_lat: tx.location.lat,
-      geo_lon: tx.location.lon,
-      mcc: tx.personal_finance_category?.detailed
-        ? parseInt(tx.personal_finance_category.detailed.split("_")[1])
-        : null,
+      currency: tx.iso_currency_code || "USD",
+      merchant_name: tx.merchant_name || null,
+      merchant: tx.merchant_name || null,
+      description: tx.name || null,
+      category: tx.category?.[0] || null,
+      subcategory: tx.category?.[1] || null,
+      pending: tx.pending ?? false,
+      payment_channel: tx.payment_channel || null,
+      status: tx.pending ? "pending" : "posted", // Use 'posted' or 'pending' to match database constraint
+      location_city: tx.location?.city || null,
+      location_state: tx.location?.region || null,
+      geo_lat: tx.location?.lat || null,
+      geo_lon: tx.location?.lon || null,
+      mcc: null,
+      category_confidence: null,
+      fraud_score: null,
+      category_reason: null,
       raw: tx,
       hash,
+      ingested_at: new Date().toISOString(), // Add ingested timestamp
     };
+  }
+
+  /**
+   * Updates account balance after a new transaction is added.
+   * Based on the transaction API route logic.
+   */
+  private async updateAccountBalance(
+    accountId: string,
+    transactionAmount: number,
+    currency: string
+  ): Promise<void> {
+    try {
+      // Get the latest balance for this account
+      const { data: latestBalance, error: balanceError } = await supabase
+        .from("account_balances")
+        .select("current, available")
+        .eq("account_id", accountId)
+        .order("as_of", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!balanceError && latestBalance) {
+        // Calculate new balances - subtract absolute value for debits
+        const newCurrent =
+          (latestBalance.current || 0) - Math.abs(transactionAmount);
+        const newAvailable =
+          (latestBalance.available || 0) - Math.abs(transactionAmount);
+
+        // Insert new balance record
+        await supabase.from("account_balances").insert({
+          account_id: accountId,
+          as_of: new Date().toISOString(),
+          current: newCurrent,
+          available: newAvailable,
+          currency: currency,
+          source: "plaid",
+        });
+
+        console.log(
+          `[Transaction Sync] Updated balance for account ${accountId}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        "[Transaction Sync] Error updating account balance:",
+        error
+      );
+      // Don't fail the transaction if balance update fails
+    }
   }
 
   /**
@@ -182,7 +288,7 @@ class TransactionSyncService {
     const { error } = await supabase
       .from("plaid_items")
       .update({ cursor })
-      .eq("item_id", itemId);
+      .eq("id", itemId);
 
     if (error) {
       console.error("Error updating cursor:", error);

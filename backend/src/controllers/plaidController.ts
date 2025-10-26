@@ -143,22 +143,42 @@ class plaidController {
       );
 
       // Fetch accounts and save them
+      console.log("[Connect Bank] Fetching accounts from Plaid...");
       const accountsResponse = await plaidService.getAccounts(access_token);
       const accounts = accountsResponse.data.accounts;
 
       // Save accounts to database
+      // Use plaidItem.id (UUID) not item_id (TEXT from Plaid)
+      console.log(
+        `[Connect Bank] Saving ${accounts.length} accounts to database...`
+      );
       const savedAccounts = await plaidService.saveAccounts(
         userId,
-        item_id,
+        plaidItem.id,
         accounts
       );
 
+      console.log(
+        `[Connect Bank] ✓ Accounts saved successfully: ${savedAccounts.length} accounts`
+      );
+
+      // Small delay to ensure database commits before transaction sync
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Trigger initial transaction sync in background
       // Don't await - let it run asynchronously
+      // Use plaidItem.id for syncing as well
+      console.log("[Connect Bank] Starting background transaction sync...");
       transactionSyncService
-        .syncTransactions(userId, item_id)
+        .syncTransactions(userId, plaidItem.id)
+        .then(() => {
+          console.log("[Connect Bank] ✓ Background transaction sync completed");
+        })
         .catch((error) => {
-          console.error("Background transaction sync failed:", error);
+          console.error(
+            "[Connect Bank] Background transaction sync failed:",
+            error
+          );
         });
 
       res.json({
