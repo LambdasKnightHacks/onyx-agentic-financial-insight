@@ -2,9 +2,8 @@
 
 import { cn } from "@/src/lib/utils";
 import { useState } from "react";
-import { Search, RefreshCw, User, LogOut } from "lucide-react";
+import { RefreshCw, User, LogOut } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,

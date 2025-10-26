@@ -20,12 +20,28 @@ export function TestTransactionButton({
 }: TestTransactionButtonProps) {
   if (!isConnected) return null;
 
+  // Helper function to generate random date within last month
+  const getRandomDateInLastMonth = () => {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // Get random timestamp between 30 days ago and now
+    const randomTime = thirtyDaysAgo.getTime() + Math.random() * (now.getTime() - thirtyDaysAgo.getTime());
+    const randomDate = new Date(randomTime);
+    
+    return randomDate.toISOString().split("T")[0];
+  };
+
   const handleClick = async () => {
     // Check if we have accounts
     if (!accounts || accounts.length === 0) {
       alert("Please connect a bank account first");
       return;
     }
+
+    const randomDate = getRandomDateInLastMonth();
+    console.log("📅 Generated random date for test transaction:", randomDate);
 
     const testTransaction = {
       plaid_transaction_id: "test_websocket_" + Date.now(),
@@ -39,7 +55,7 @@ export function TestTransactionButton({
         "Uber",
       ][Math.floor(Math.random() * 6)],
       description: "Test transaction via WebSocket",
-      posted_at: new Date().toISOString().split("T")[0],
+      posted_at: randomDate,
       category: [
         "Shopping",
         "Food and Drink",
