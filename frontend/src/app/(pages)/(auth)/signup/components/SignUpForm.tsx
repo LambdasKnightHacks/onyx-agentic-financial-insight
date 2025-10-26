@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/button"
 import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Card } from "@/src/components/ui/card"
-import { Sparkles } from "lucide-react"
+import { OnyxIcon } from "@/src/components/logo"
 import Link from "next/link"
 import { signup } from "@/src/lib/auth-actions"
 
@@ -29,18 +29,15 @@ export default function SignUpForm() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <Link href="/" className="inline-flex items-center gap-2 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold">MyFinance</span>
+        <div className="text-center flex flex-col items-center gap-3">
+          <Link href="/" className="inline-flex items-center">
+              <OnyxIcon size={300} className="text-primary-foreground" priority />
           </Link>
           <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-muted-foreground mt-2">Get started with MyFinance today</p>
+          <p className="text-muted-foreground">Get started with MyFinance today</p>
         </div>
 
-        <Card className="p-8">
+        <Card className="p-5">
           {error && (
             <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               {error}
