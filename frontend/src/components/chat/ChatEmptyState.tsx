@@ -43,7 +43,7 @@ export function ChatEmptyState({ onSuggestionClick }: ChatEmptyStateProps) {
         <Bot className="h-12 w-12 text-primary" />
       </div>
 
-      <h2 className="text-2xl font-bold mb-2">Ask FinFlow AI Anything</h2>
+      <h2 className="text-2xl font-bold mb-2">Ask Onyx Anything</h2>
       <p className="text-muted-foreground mb-8 max-w-md">
         I can help you understand your spending, track budgets, detect
         anomalies, and provide personalized financial insights.
