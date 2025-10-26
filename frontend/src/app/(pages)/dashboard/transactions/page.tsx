@@ -169,7 +169,7 @@ export default function TransactionsPage() {
     }
   };
 
-  // Standard transaction categories - combine with existing ones
+  // Standard transaction categories
   const standardCategories = [
     "Food & Dining",
     "Shopping",

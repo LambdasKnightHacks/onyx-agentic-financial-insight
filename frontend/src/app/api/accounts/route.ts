@@ -22,9 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 })
     }
 
-    const transformedAccounts = accounts?.map(transformSupabaseAccountToAccount) || []
-
-    return NextResponse.json(transformedAccounts)
+    return NextResponse.json(accounts || [])
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

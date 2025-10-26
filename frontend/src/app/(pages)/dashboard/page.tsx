@@ -44,14 +44,14 @@ export default function DashboardPage() {
         // Handle error responses
         setAccounts(Array.isArray(accountsData) ? accountsData : []);
         setRecentTransactions(
-          Array.isArray(transactionsData) ? transactionsData.slice(0, 5) : []
+          Array.isArray(transactionsData) ? transactionsData : []
         );
-        setAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 3) : []);
+        setAlerts(Array.isArray(alertsData) ? alertsData : []);
         setInsights(
-          Array.isArray(insightsData) ? insightsData.slice(0, 3) : []
+          Array.isArray(insightsData) ? insightsData : []
         );
         setBudgets(
-          Array.isArray(budgetsData) ? budgetsData.slice(0, 3) : []
+          Array.isArray(budgetsData) ? budgetsData : []
         );
       } catch (error) {
         console.error("Failed to fetch overview data:", error);

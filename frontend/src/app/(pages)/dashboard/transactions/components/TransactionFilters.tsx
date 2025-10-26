@@ -44,9 +44,9 @@ export function TransactionFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All accounts</SelectItem>
-              {accounts.map((acc) => (
+              {accounts.map((acc: any) => (
                 <SelectItem key={acc.id} value={acc.id}>
-                  {acc.nickname}
+                  {acc.nickname ?? acc.institution ?? 'Account'}
                 </SelectItem>
               ))}
             </SelectContent>
