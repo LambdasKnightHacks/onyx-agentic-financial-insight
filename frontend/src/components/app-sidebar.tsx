@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ArrowLeftRight, Lightbulb, ShieldAlert, Zap, Settings, BarChart3 } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Lightbulb, ShieldAlert, DollarSign, Settings, BarChart3 } from "lucide-react"
 import { cn } from "@/src/lib/utils"
 import { OnyxIcon } from "@/src/components/logo"
 
