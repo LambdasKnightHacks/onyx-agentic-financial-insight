@@ -1,16 +1,19 @@
 // components/LoginForm.tsx
-import Link from "next/link"
-import { Button } from "@/src/components/ui/button"
+import Link from "next/link";
+import { Button } from "@/src/components/ui/button";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@/src/components/ui/card"
-import { Input } from "@/src/components/ui/input"
-import { Label } from "@/src/components/ui/label"
-import { login } from "@/src/lib/auth-actions"
-import SignInWithGoogleButton from "./SignInWithGoogleButton"
-import { GL } from '@/src/components/gl'
-import { OnyxIcon } from "@/src/components/logo"
-
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { login } from "@/src/lib/auth-actions";
+import SignInWithGoogleButton from "./SignInWithGoogleButton";
+import { GL } from "@/src/components/gl";
+import { OnyxIcon } from "@/src/components/logo";
 
 export default function LoginForm() {
   return (
@@ -22,26 +25,39 @@ export default function LoginForm() {
           <OnyxIcon size={300} className="text-primary" />
         </Link>
 
-        <Card className="mx-auto max-w-sm backdrop-blur-sm bg-card/80">
+        <Card className="mx-auto w-full max-w-lg backdrop-blur-sm bg-card/80">
           <CardHeader>
-            <CardTitle className="text-2xl">Login</CardTitle>
-            <CardDescription>Enter your email below to login to your account</CardDescription>
+            <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
           </CardHeader>
           <CardContent>
             <form action="">
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="your_email@example.com" required />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="your_email@example.com"
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <div className="flex items-center">
                     <Label htmlFor="password">Password</Label>
-                    <Link href="#" className=" pl-20 ml-auto inline-block text-sm underline">
-                      Forgot your password?
-                    </Link>
                   </div>
-                  <Input id="password" name="password" type="password" required />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                  />
+                  <Link
+                    href="#"
+                    className=" pl-20 ml-auto inline-block text-sm text-[#58ABFA]"
+                  >
+                    Forgot your password?
+                  </Link>
                 </div>
 
                 <Button type="submit" formAction={login} className="w-full">
@@ -54,7 +70,7 @@ export default function LoginForm() {
 
             <div className="mt-4 text-center text-sm">
               Don't have an account?{" "}
-              <Link href="/signup" className="underline">
+              <Link href="/signup" className=" text-[#58ABFA]">
                 Sign up
               </Link>
             </div>
@@ -62,5 +78,5 @@ export default function LoginForm() {
         </Card>
       </div>
     </>
-  )
+  );
 }

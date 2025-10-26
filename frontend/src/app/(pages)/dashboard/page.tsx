@@ -89,12 +89,12 @@ export default function DashboardPage() {
     if (metadata?.name) return metadata.name;
     if (metadata?.full_name) return metadata.full_name;
     if (metadata?.first_name) return metadata.first_name;
-    
+
     // Fall back to email if no defined name
     if (user.email) {
       return user.email.split("@")[0];
     }
-    
+
     return "";
   };
 
@@ -114,7 +114,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-lg mb-1">
-              🧪 Test Plaid Integration
+              Test Plaid Integration
             </h3>
             <p className="text-sm text-muted-foreground">
               Click below to connect a bank account via Plaid Link
