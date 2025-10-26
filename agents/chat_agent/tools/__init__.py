@@ -24,6 +24,8 @@ from .visualization_tools import (
     generate_budget_pace_chart,
     generate_category_volatility_scatter,
     generate_budget_breach_curve,
+    generate_income_expense_comparison,
+    generate_subcategory_comparison,
 )
 
 __all__ = [
@@ -49,5 +51,7 @@ __all__ = [
     "generate_budget_pace_chart",
     "generate_category_volatility_scatter",
     "generate_budget_breach_curve",
+    "generate_income_expense_comparison",
+    "generate_subcategory_comparison",
 ]
 

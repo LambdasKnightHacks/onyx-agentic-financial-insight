@@ -30,6 +30,8 @@ from .tools.visualization_tools import (
     generate_category_volatility_scatter,
     generate_budget_breach_curve,
     generate_budget_manager,
+    generate_income_expense_comparison,
+    generate_subcategory_comparison,
 )
 
 # Base tools list (without user context)
@@ -57,6 +59,8 @@ BASE_TOOLS = [
     generate_category_volatility_scatter,
     generate_budget_breach_curve,
     generate_budget_manager,
+    generate_income_expense_comparison,
+    generate_subcategory_comparison,
 ]
 
 

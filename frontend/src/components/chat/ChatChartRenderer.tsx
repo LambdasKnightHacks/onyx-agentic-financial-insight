@@ -14,6 +14,7 @@ import {
   LineChart,
   PieChart,
   ScatterChart,
+  ComposedChart,
   Area,
   Bar,
   Line,
@@ -241,6 +242,8 @@ export function ChatChartRenderer({
               </div>
             );
           }
+          // Support both config.bars (new format) and config.series (legacy)
+          const barSeries = config.bars || config.series || [];
           return (
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -248,12 +251,13 @@ export function ChatChartRenderer({
               <YAxis />
               <Tooltip />
               <Legend />
-              {config.series?.map((series: any, idx: number) => (
+              {barSeries.map((series: any, idx: number) => (
                 <Bar
                   key={idx}
                   dataKey={series.dataKey}
-                  fill={series.color}
+                  fill={series.fill || series.color}
                   name={series.name}
+                  stackId={series.stackId}
                 />
               ))}
             </BarChart>
@@ -419,7 +423,7 @@ export function ChatChartRenderer({
             );
           }
           return (
-            <BarChart data={data}>
+            <ComposedChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey={config.xAxis?.dataKey || "name"} />
               {config.yAxis &&
@@ -443,6 +447,7 @@ export function ChatChartRenderer({
                   fill={bar.fill || bar.color}
                   name={bar.name}
                   yAxisId={bar.yAxisId || "left"}
+                  stackId={bar.stackId}
                 />
               ))}
               {config.lines?.map((line: any, idx: number) => (
@@ -456,7 +461,7 @@ export function ChatChartRenderer({
                   strokeWidth={line.strokeWidth || 2}
                 />
               ))}
-            </BarChart>
+            </ComposedChart>
           );
 
         case "heatmap":

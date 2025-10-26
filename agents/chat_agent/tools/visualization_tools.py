@@ -1164,6 +1164,279 @@ async def generate_budget_manager(user_id: str, mode: Optional[str]) -> dict:
         }
 
 
+async def generate_income_expense_comparison(
+    user_id: str,
+    months: Optional[int]
+) -> dict:
+    """
+    Generate diverging bar chart with income (positive) and expenses (negative)
+    overlaid with cumulative net income line.
+    
+    Shows monthly income vs expenses as stacked bars with a line showing net position.
+    
+    Args:
+        user_id: User ID
+        months: Number of months to show (defaults to 12 if not provided)
+    
+    Returns:
+        Composed chart with stacked bars and cumulative line
+    """
+    try:
+        # Handle default value
+        if months is None:
+            months = 12
+        
+        supabase = get_supabase_client()
+        
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=months * 30)
+        
+        # Get all transactions for the period
+        response = supabase.table("transactions").select(
+            "amount, posted_at"
+        ).eq("user_id", user_id).gte(
+            "posted_at", start_date.strftime("%Y-%m-%d")
+        ).execute()
+        
+        if not response.data:
+            return {
+                "success": False,
+                "error": "No transaction data",
+                "summary": f"No transactions found for the last {months} months"
+            }
+        
+        df = pd.DataFrame(response.data)
+        df['posted_at'] = pd.to_datetime(df['posted_at'])
+        df['month'] = df['posted_at'].dt.to_period('M')
+        
+        # Separate income and expenses
+        income_df = df[df['amount'] > 0].copy()
+        expenses_df = df[df['amount'] < 0].copy()
+        
+        # Group by month
+        monthly_income = income_df.groupby('month')['amount'].sum()
+        monthly_expenses = expenses_df.groupby('month')['amount'].sum().abs()
+        
+        # Build data array
+        data = []
+        cumulative_net = 0
+        
+        # Get all months in range
+        all_months = pd.period_range(start=start_date, end=end_date, freq='M')
+        
+        for month in all_months:
+            income = monthly_income.get(month, 0)
+            expenses = monthly_expenses.get(month, 0)
+            net = income - expenses
+            cumulative_net += net
+            
+            data.append({
+                "month": month.strftime("%b %Y"),
+                "income": round(income, 2),
+                "expenses": round(-expenses, 2),  # Negative for diverging effect
+                "net_income": round(net, 2),
+                "cumulative_net": round(cumulative_net, 2)
+            })
+        
+        colors = _get_color_palette()
+        
+        return {
+            "success": True,
+            "chart_type": "composed",
+            "data": data,
+            "config": {
+                "xAxis": {"dataKey": "month"},
+                "yAxis": [
+                    {
+                        "yAxisId": "left",
+                        "orientation": "left",
+                        "label": "Amount ($)"
+                    },
+                    {
+                        "yAxisId": "right",
+                        "orientation": "right",
+                        "label": "Cumulative Net ($)"
+                    }
+                ],
+                "bars": [
+                    {
+                        "dataKey": "income",
+                        "name": "Income",
+                        "fill": colors["success"],
+                        "yAxisId": "left",
+                        "stackId": "stack"
+                    },
+                    {
+                        "dataKey": "expenses",
+                        "name": "Expenses",
+                        "fill": colors["danger"],
+                        "yAxisId": "left",
+                        "stackId": "stack"
+                    }
+                ],
+                "lines": [
+                    {
+                        "dataKey": "cumulative_net",
+                        "name": "Cumulative Net Income",
+                        "stroke": colors["info"],
+                        "yAxisId": "right",
+                        "strokeWidth": 3
+                    }
+                ]
+            },
+            "metadata": {
+                "title": f"Income vs Expenses - Last {months} Months",
+                "description": "Monthly income and expenses with cumulative net income trend",
+                "insights": [
+                    f"Total income: {_format_currency(sum(monthly_income))}",
+                    f"Total expenses: {_format_currency(sum(monthly_expenses))}",
+                    f"Net position: {_format_currency(cumulative_net)}",
+                    f"Average monthly net: {_format_currency(cumulative_net / len(data))}"
+                ]
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "summary": f"Failed to generate income/expense comparison: {str(e)}"
+        }
+
+
+async def generate_subcategory_comparison(
+    user_id: str,
+    category: str,
+    months: Optional[int]
+) -> dict:
+    """
+    Generate stacked column chart comparing subcategories within a main category over time.
+    
+    Example: Compare "groceries" vs "dining" within "food" category month by month.
+    
+    Args:
+        user_id: User ID
+        category: Main category to break down (e.g., "food", "transportation")
+        months: Number of months to show (defaults to 12 if not provided)
+    
+    Returns:
+        Stacked bar chart showing subcategory breakdown over time
+    """
+    try:
+        # Handle default value
+        if months is None:
+            months = 12
+        
+        supabase = get_supabase_client()
+        
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=months * 30)
+        
+        # Get all transactions for the category
+        response = supabase.table("transactions").select(
+            "amount, posted_at, subcategory"
+        ).eq("user_id", user_id).eq(
+            "category", category
+        ).gte(
+            "posted_at", start_date.strftime("%Y-%m-%d")
+        ).lt("amount", 0).execute()  # Only expenses (negative amounts)
+        
+        if not response.data:
+            return {
+                "success": False,
+                "error": "No transaction data",
+                "summary": f"No {category} transactions found for the last {months} months"
+            }
+        
+        df = pd.DataFrame(response.data)
+        df['posted_at'] = pd.to_datetime(df['posted_at'])
+        df['month'] = df['posted_at'].dt.to_period('M')
+        df['amount'] = df['amount'].abs()  # Convert to positive for display
+        
+        # Group by month and subcategory
+        monthly_data = df.groupby(['month', 'subcategory'])['amount'].sum().reset_index()
+        
+        # Get all unique subcategories
+        subcategories = sorted(df['subcategory'].unique())
+        
+        # Get all months in range
+        all_months = pd.period_range(start=start_date, end=end_date, freq='M')
+        
+        # Build data array with all months
+        data = []
+        for month in all_months:
+            month_entry = {"month": month.strftime("%b %Y")}
+            
+            # Add each subcategory as a column
+            for subcat in subcategories:
+                matching = monthly_data[
+                    (monthly_data['month'] == month) & 
+                    (monthly_data['subcategory'] == subcat)
+                ]
+                amount = matching['amount'].sum() if not matching.empty else 0
+                month_entry[subcat] = round(amount, 2)
+            
+            data.append(month_entry)
+        
+        # Generate colors for each subcategory
+        colors = _get_color_palette()
+        color_list = [
+            colors["primary"],
+            colors["success"],
+            colors["warning"],
+            colors["danger"],
+            colors["info"],
+            "#8b5cf6",  # violet
+            "#ec4899",  # pink
+            "#f97316",  # orange
+        ]
+        
+        # Build bar configurations
+        bars = []
+        for idx, subcat in enumerate(subcategories):
+            bars.append({
+                "dataKey": subcat,
+                "name": subcat.replace("_", " ").title(),
+                "fill": color_list[idx % len(color_list)],
+                "stackId": "stack"
+            })
+        
+        # Calculate totals for insights
+        total_spent = df['amount'].sum()
+        subcat_totals = df.groupby('subcategory')['amount'].sum().to_dict()
+        
+        insights = [f"Total {category}: {_format_currency(total_spent)}"]
+        for subcat in subcategories:
+            amount = subcat_totals.get(subcat, 0)
+            percentage = (amount / total_spent * 100) if total_spent > 0 else 0
+            insights.append(
+                f"{subcat.replace('_', ' ').title()}: {_format_currency(amount)} ({percentage:.1f}%)"
+            )
+        
+        return {
+            "success": True,
+            "chart_type": "bar",
+            "data": data,
+            "config": {
+                "xAxis": {"dataKey": "month"},
+                "yAxis": {"label": "Amount ($)"},
+                "bars": bars
+            },
+            "metadata": {
+                "title": f"{category.title()} Breakdown - Last {months} Months",
+                "description": f"Monthly comparison of {category} subcategories",
+                "insights": insights
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "summary": f"Failed to generate subcategory comparison: {str(e)}"
+        }
+
+
 async def generate_budget_breach_curve(user_id: str) -> dict:
     """
     Generate time-to-breach curve showing when each budget will be exceeded.
