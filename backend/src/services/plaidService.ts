@@ -128,9 +128,9 @@ class PlaidService {
         .eq("user_id", userId)
         .eq("status", "active");
 
-      // itemId is the database UUID (plaid_items.id), not the Plaid item_id
       if (itemId) {
-        query = query.eq("id", itemId);
+        // Try both database UUID and Plaid item_id
+        query = query.or(`id.eq.${itemId},item_id.eq.${itemId}`);
       }
 
       const { data, error } = await query.single();
@@ -252,7 +252,7 @@ class PlaidService {
       const savedAccounts: PlaidAccount[] = [];
 
       for (const account of accounts) {
-        const accountData = {
+        const accountData: any = {
           user_id: userId,
           name: account.name,
           type: account.type,
