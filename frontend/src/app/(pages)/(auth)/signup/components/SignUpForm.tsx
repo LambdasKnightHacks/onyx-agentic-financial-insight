@@ -38,17 +38,17 @@ export default function SignUpForm() {
           <Link href="/" className="inline-flex items-center">
               <OnyxIcon size={300} className="text-primary-foreground" priority />
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-muted-foreground">Get started with MyFinance today</p>
+         
         </div>
 
-        <Card className="p-5">
+        <Card className="p-10 backdrop-blur-sm bg-card/80">
           {error && (
             <div className="mb-5 p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               {error}
             </div>
           )}
           <form action={handleSubmit} className="space-y-8">
+             <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
             <div className="space-y-2">
               <Label htmlFor="first-name">First Name</Label>
               <Input
