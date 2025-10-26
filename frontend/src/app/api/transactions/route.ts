@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
           .single()
 
         if (!balanceError && latestBalance) {
-          // Calculate new balances - subtract absolute value for debits
+          // Calculate new balances
           const newCurrent = (latestBalance.current || 0) - Math.abs(transactionData.amount)
           const newAvailable = (latestBalance.available || 0) - Math.abs(transactionData.amount)
 
