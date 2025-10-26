@@ -5,7 +5,7 @@ import { Card } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, Zap, ExternalLink } from "lucide-react";
+import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, DollarSign, ExternalLink } from "lucide-react";
 import type { Account, Transaction, FraudAlert } from "@/src/lib/types";
 import { PlaidLinkButton } from "@/src/components/plaid-link-button";
 import { useAuth } from "@/src/components/auth-context";
@@ -18,23 +18,26 @@ export default function DashboardPage() {
   );
   const [alerts, setAlerts] = useState<FraudAlert[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [accountsRes, transactionsRes, alertsRes, insightsRes] =
+        const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes] =
           await Promise.all([
             fetch("/api/accounts"),
             fetch("/api/transactions?limit=5"),
             fetch("/api/fraud?status=new"),
-            fetch("/api/insights?limit=3"),
+            fetch("/api/insights?limit=5"),
+            fetch("/api/budgets?limit=5")
           ]);
 
         const accountsData = await accountsRes.json();
         const transactionsData = await transactionsRes.json();
         const alertsData = await alertsRes.json();
         const insightsData = await insightsRes.json();
+        const budgetsData = await budgetsRes.json();
 
         // Handle error responses
         setAccounts(Array.isArray(accountsData) ? accountsData : []);
@@ -44,6 +47,9 @@ export default function DashboardPage() {
         setAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 3) : []);
         setInsights(
           Array.isArray(insightsData) ? insightsData.slice(0, 3) : []
+        );
+        setBudgets(
+          Array.isArray(budgetsData) ? budgetsData.slice(0, 3) : []
         );
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
@@ -115,7 +121,7 @@ export default function DashboardPage() {
           <PlaidLinkButton
             onSuccess={(accounts) => {
               console.log("Accounts connected:", accounts);
-              // Refresh the page data
+              // Refresh page
               window.location.reload();
             }}
           />
@@ -254,16 +260,16 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer">
-            <a href="/dashboard/automations" className="block">
+            <a href="/dashboard/budgets" className="block">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-lg bg-green-100 dark:bg-green-950">
-                  <Zap className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Rules</h3>
-                  <p className="text-2xl font-bold mt-1">12</p>
+                  <h3 className="font-semibold">Budgets</h3>
+                  <p className="text-2xl font-bold mt-1">{budgets.length}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    actions this week
+                    active budgets
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
