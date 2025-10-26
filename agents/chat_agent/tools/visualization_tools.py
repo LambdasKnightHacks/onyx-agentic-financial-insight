@@ -65,7 +65,7 @@ def _get_category_color(category: str) -> str:
 
 async def generate_cashflow_projection_chart(
     user_id: str, 
-    days: int = 60
+    days: Optional[int]
 ) -> dict:
     """
     Generate cashflow runway projection area chart.
@@ -74,12 +74,16 @@ async def generate_cashflow_projection_chart(
     
     Args:
         user_id: User ID
-        days: Number of days to project forward (default 60)
+        days: Number of days to project forward (defaults to 60 if not provided)
     
     Returns:
         Area chart config with projected balance and runway threshold
     """
     try:
+        # Handle default value inside function
+        if days is None:
+            days = 60
+        
         supabase = get_supabase_client()
         
         # Get current balance
@@ -197,14 +201,14 @@ async def generate_cashflow_projection_chart(
 
 async def generate_money_flow_sankey(
     user_id: str, 
-    month: Optional[str] = None
+    month: Optional[str]
 ) -> dict:
     """
     Generate Sankey diagram showing money flow: income → categories → merchants.
     
     Args:
         user_id: User ID
-        month: Optional month in YYYY-MM format (default: current month)
+        month: Optional month in YYYY-MM format (defaults to current month if not provided)
     
     Returns:
         Sankey chart config with nodes and links
@@ -423,19 +427,23 @@ async def generate_category_drift_chart(user_id: str) -> dict:
 
 async def generate_top_merchants_pareto(
     user_id: str, 
-    days: int = 30
+    days: Optional[int]
 ) -> dict:
     """
     Generate Pareto chart showing top merchants (bar + cumulative line).
     
     Args:
         user_id: User ID
-        days: Number of days to analyze (default 30)
+        days: Number of days to analyze (defaults to 30 if not provided)
     
     Returns:
         Composed chart (bar + line) showing 80/20 merchant analysis
     """
     try:
+        # Handle default value inside function
+        if days is None:
+            days = 30
+        
         supabase = get_supabase_client()
         
         date_threshold = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -538,19 +546,23 @@ async def generate_top_merchants_pareto(
 
 async def generate_spending_heatmap(
     user_id: str,
-    heatmap_type: str = "calendar"
+    heatmap_type: Optional[str]
 ) -> dict:
     """
     Generate spending heatmap (calendar or hourly).
     
     Args:
         user_id: User ID
-        heatmap_type: Type of heatmap ("calendar" for day-of-month, "hourly" for hour-of-week)
+        heatmap_type: Type of heatmap ("calendar" for day-of-month, "hourly" for hour-of-week, defaults to "calendar" if not provided)
     
     Returns:
         Heatmap data suitable for custom rendering
     """
     try:
+        # Handle default value inside function
+        if heatmap_type is None:
+            heatmap_type = "calendar"
+        
         supabase = get_supabase_client()
         
         # Get last 60 days of transactions
@@ -688,6 +700,14 @@ async def generate_subscription_analysis(user_id: str) -> dict:
                     "count": len(group)
                 })
         
+        # Check if we found any subscriptions
+        if not subscriptions:
+            return {
+                "success": False,
+                "error": "No subscriptions found",
+                "summary": "No recurring payment patterns detected in your transaction history. You don't appear to have any active subscriptions."
+            }
+        
         # Sort by amount
         subscriptions.sort(key=lambda x: x["amount"], reverse=True)
         
@@ -732,14 +752,14 @@ async def generate_subscription_analysis(user_id: str) -> dict:
 
 async def generate_budget_scenario_chart(
     user_id: str,
-    scenarios: Optional[List[Dict[str, Any]]] = None
+    scenarios: Optional[List[Dict[str, Any]]]
 ) -> dict:
     """
     Generate waterfall chart showing budget scenarios.
     
     Args:
         user_id: User ID
-        scenarios: List of scenario changes, e.g., [{"category": "dining", "change": -200}]
+        scenarios: Optional list of scenario changes, e.g., [{"category": "dining", "change": -200}] (defaults to empty list if not provided)
     
     Returns:
         Waterfall chart showing baseline → scenarios → net result
@@ -828,7 +848,7 @@ async def generate_budget_scenario_chart(
 
 async def generate_budget_pace_chart(
     user_id: str,
-    category: Optional[str] = None
+    category: Optional[str]
 ) -> dict:
     """
     Generate budget pace chart showing actual vs budget allocation.
@@ -837,7 +857,7 @@ async def generate_budget_pace_chart(
     
     Args:
         user_id: User ID
-        category: Optional category to focus on (default: all budgets)
+        category: Optional category to focus on (defaults to first active budget if not provided)
     
     Returns:
         Line chart with cumulative spend vs linear budget line
@@ -1087,6 +1107,64 @@ async def generate_category_volatility_scatter(user_id: str) -> dict:
             "success": False,
             "error": str(e),
             "summary": f"Failed to generate volatility scatter: {str(e)}"
+        }
+
+
+async def generate_budget_manager(user_id: str, mode: Optional[str]) -> dict:
+    """
+    Generate an interactive budget manager component.
+    
+    This creates a UI component for users to create or edit budgets.
+    
+    Args:
+        user_id: User ID
+        mode: "create" or "edit" (defaults to "create" if not provided)
+    
+    Returns:
+        Budget manager component with existing budgets if available
+    """
+    try:
+        # Handle default value inside function
+        if mode is None:
+            mode = "create"
+        
+        supabase = get_supabase_client()
+        
+        # Get existing budgets
+        budgets_response = supabase.table("budgets").select(
+            "category, cap_amount, period"
+        ).eq("user_id", user_id).eq("is_active", True).execute()
+        
+        existing_budgets = []
+        if budgets_response.data:
+            for budget in budgets_response.data:
+                existing_budgets.append({
+                    "category": budget["category"],
+                    "amount": round(budget["cap_amount"], 2),
+                    "period": budget["period"]
+                })
+        
+        return {
+            "success": True,
+            "chart_type": "budget_manager",
+            "data": {
+                "mode": mode,
+                "existing_budgets": existing_budgets
+            },
+            "config": {},
+            "metadata": {
+                "title": "Budget Manager" if mode == "create" else "Edit Budget",
+                "description": "Create or update your spending budgets" if mode == "create" else "Update your budget limits",
+                "insights": [
+                    f"You have {len(existing_budgets)} active budget(s)" if existing_budgets else "No budgets set yet"
+                ]
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "summary": f"Failed to load budget manager: {str(e)}"
         }
 
 
