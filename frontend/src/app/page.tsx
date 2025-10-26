@@ -1,6 +1,7 @@
 import { Button } from "@/src/components/ui/button";
-import { ArrowRight, Shield, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, Shield, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { OnyxIcon } from "@/src/components/logo";
 
 export default function LandingPage() {
   return (
@@ -8,12 +9,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4 md:px-8 mx-auto">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold">MyFinance</span>
-          </div>
+              <OnyxIcon size={250} className="text-primary-foreground pt-5" priority />
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
               <Link href="/login">Log In</Link>
@@ -32,7 +28,6 @@ export default function LandingPage() {
             <div className="text-center space-y-8">
               {/* Badge */}
               <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5 text-sm">
-                <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-muted-foreground">
                   AI-powered financial insights
                 </span>
@@ -101,7 +96,7 @@ export default function LandingPage() {
 
                 <div className="rounded-xl border border-border bg-card p-6 text-left shadow-sm transition-shadow hover:shadow-md">
                   <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Sparkles className="h-6 w-6 text-primary" />
+                    <OnyxIcon size={32} />
                   </div>
                   <h3 className="mb-2 text-lg font-semibold">Automation</h3>
                   <p className="text-sm text-muted-foreground">
