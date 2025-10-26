@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
+import { getUserIdFromRequest } from "@/lib/auth-utils"
 
 // Create admin client for server-side API route
 const supabaseAdmin = createClient(
