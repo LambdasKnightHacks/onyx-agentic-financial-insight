@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
-import { getBudgetSpendingSummary } from "@/src/lib/budget-checker"
+import { getUserIdFromRequest } from "@/lib/auth-utils"
+import { getBudgetSpendingSummary } from "@/lib/budget-checker"
 
 // returns the spending summary for all the budgets
 export async function GET(request: NextRequest) {

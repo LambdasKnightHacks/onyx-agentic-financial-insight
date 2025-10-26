@@ -1,8 +1,8 @@
 "use client";
 
 import { KeyboardEvent } from "react";
-import { Textarea } from "@/src/components/ui/textarea";
-import { Button } from "@/src/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 
 interface ChatInputProps {

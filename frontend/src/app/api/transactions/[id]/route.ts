@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/src/utils/supabase/server";
-import { getUserIdFromRequest } from "@/src/lib/auth-utils";
+import { createClient } from "@/utils/supabase/server";
+import { getUserIdFromRequest } from "@/lib/auth-utils";
 
 export async function PATCH(
   request: NextRequest,

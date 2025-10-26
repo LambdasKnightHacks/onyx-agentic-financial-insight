@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
-import { Button } from "@/src/components/ui/button";
-import { Skeleton } from "@/src/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, DollarSign, ExternalLink } from "lucide-react";
-import type { Account, Transaction } from "@/src/lib/types";
+import type { Account, Transaction } from "@/lib/types";
 import type { Alert } from "./alerts/types";
 import { getAlertTitle, getAlertIcon, getSeverityColor } from "./alerts/utils";
-import { PlaidLinkButton } from "@/src/components/plaid-link-button";
-import { useAuth } from "@/src/components/auth-context";
+import { PlaidLinkButton } from "@/components/plaid-link-button";
+import { useAuth } from "@/components/auth-context";
 
 export default function DashboardPage() {
   const { user } = useAuth();

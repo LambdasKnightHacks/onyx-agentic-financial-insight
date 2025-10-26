@@ -6,16 +6,16 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Skeleton } from "@/src/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/src/components/ui/alert";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   useTransactionAnalytics,
   SpendingOverTimeChart,
   CategoryBreakdownChart,
   BudgetProgressBars,
-} from "@/src/components/graph-sidebar";
+} from "@/components/graph-sidebar";
 
 export default function GraphsPage() {
   const {

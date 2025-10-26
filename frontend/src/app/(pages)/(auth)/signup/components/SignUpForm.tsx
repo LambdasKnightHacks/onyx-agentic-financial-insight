@@ -2,14 +2,14 @@
 
 import type React from "react";
 import { useState } from "react";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { Card } from "@/src/components/ui/card";
-import { OnyxIcon } from "@/src/components/logo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { OnyxIcon } from "@/components/logo";
 import Link from "next/link";
-import { signup } from "@/src/lib/auth-actions";
-import { GL } from "@/src/components/gl";
+import { signup } from "@/lib/auth-actions";
+import { GL } from "@/components/gl";
 
 export default function SignUpForm() {
   const [loading, setLoading] = useState(false);

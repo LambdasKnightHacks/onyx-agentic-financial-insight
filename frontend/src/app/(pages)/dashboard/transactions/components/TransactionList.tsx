@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
-import { Pagination } from "@/src/components/ui/pagination";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import { ArrowUpRight, ArrowDownRight, CreditCard, AlertTriangle } from "lucide-react";
-import type { Transaction, Account } from "@/src/lib/types";
+import type { Transaction, Account } from "@/lib/types";
 
 interface TransactionListProps {
   groupedTransactions: Record<string, Transaction[]>;

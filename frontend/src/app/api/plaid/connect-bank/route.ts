@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/src/lib/api-auth";
+import { getAuthenticatedUser } from "@/lib/api-auth";
 
 /**
  * POST /api/plaid/connect-bank

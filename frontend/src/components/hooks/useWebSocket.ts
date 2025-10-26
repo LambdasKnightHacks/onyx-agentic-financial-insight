@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { WEBSOCKET_CONFIG } from "@/src/lib/websocket-config";
+import { WEBSOCKET_CONFIG } from "@/lib/websocket-config";
 
 interface WebSocketMessage {
   type:

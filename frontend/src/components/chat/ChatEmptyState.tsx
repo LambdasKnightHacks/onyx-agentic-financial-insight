@@ -7,7 +7,7 @@ import {
   DollarSign,
   AlertCircle,
 } from "lucide-react";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 interface ChatEmptyStateProps {
   onSuggestionClick: (suggestion: string) => void;

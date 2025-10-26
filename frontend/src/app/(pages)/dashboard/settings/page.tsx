@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card } from "@/src/components/ui/card"
-import { Button } from "@/src/components/ui/button"
-import { Badge } from "@/src/components/ui/badge"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Database, Trash2 } from "lucide-react"
-import { AddAccountDialog } from "@/src/components/add-account"
-import { useToast } from "@/src/components/hooks/use-toast"
-import type { Account } from "@/src/lib/types"
+import { AddAccountDialog } from "@/components/add-account"
+import { useToast } from "@/components/hooks/use-toast"
+import type { Account } from "@/lib/types"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/src/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog"
 
 export default function SettingsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
