@@ -204,14 +204,16 @@ async def generate_money_flow_sankey(
     month: Optional[str]
 ) -> dict:
     """
-    Generate Sankey diagram showing money flow: income → categories → merchants.
+    Generate 3-level Sankey diagram: Income → Expenses/Savings → Categories.
+    
+    Simple format following Nivo Sankey best practices - just an array of flows.
     
     Args:
         user_id: User ID
         month: Optional month in YYYY-MM format (defaults to current month if not provided)
     
     Returns:
-        Sankey chart config with nodes and links
+        Sankey chart config with simple data array
     """
     try:
         supabase = get_supabase_client()
@@ -226,9 +228,9 @@ async def generate_money_flow_sankey(
         next_month = (target_month + timedelta(days=32)).replace(day=1)
         end_date = next_month.strftime("%Y-%m-01")
         
-        # Get transactions for the month
+        # Get ALL transactions for the month (income and expenses)
         response = supabase.table("transactions").select(
-            "amount, category, merchant_name, payment_channel"
+            "amount, category"
         ).eq("user_id", user_id).gte("posted_at", start_date).lt("posted_at", end_date).execute()
         
         if not response.data:
@@ -241,73 +243,67 @@ async def generate_money_flow_sankey(
         df = pd.DataFrame(response.data)
         
         # Separate income and expenses
-        income_total = df[df['amount'] > 0]['amount'].sum()
-        expenses = df[df['amount'] < 0].copy()
-        expenses['amount'] = expenses['amount'].abs()
+        income_df = df[df['amount'] > 0].copy()
+        expenses_df = df[df['amount'] < 0].copy()
+        expenses_df['amount'] = expenses_df['amount'].abs()
         
-        # Group by category
-        category_totals = expenses.groupby('category')['amount'].sum().to_dict()
+        # Calculate totals
+        total_income = income_df['amount'].sum()
+        total_expenses = expenses_df['amount'].sum()
+        total_savings = max(total_income - total_expenses, 0)
         
-        # Get top 5 merchants per category
-        merchant_data = []
-        for category in category_totals.keys():
-            cat_merchants = expenses[expenses['category'] == category].groupby(
-                'merchant_name'
-            )['amount'].sum().nlargest(3)
-            for merchant, amount in cat_merchants.items():
-                merchant_data.append({
-                    "category": category,
-                    "merchant": merchant or "Unknown",
-                    "amount": round(amount, 2)
-                })
+        if total_income == 0:
+            return {
+                "success": False,
+                "error": "No income data",
+                "summary": f"No income transactions found for {target_month.strftime('%B %Y')}"
+            }
         
-        # Build Sankey nodes and links
-        nodes = [{"name": "Income", "id": "income"}]
-        links = []
-        node_id = 1
+        # Group expenses by category
+        category_totals = expenses_df.groupby('category')['amount'].sum().sort_values(ascending=False)
         
-        # Add category nodes and links from income
-        category_ids = {}
+        # Build simple data array (Nivo format)
+        data = []
+        
+        # Flow 1: Income → Expenses
+        if total_expenses > 0:
+            data.append({
+                "source": "Income",
+                "target": "Expenses",
+                "value": round(total_expenses, 2)
+            })
+        
+        # Flow 2: Income → Savings (if any)
+        if total_savings > 0:
+            data.append({
+                "source": "Income",
+                "target": "Savings",
+                "value": round(total_savings, 2)
+            })
+        
+        # Flow 3: Expenses → Categories
         for category, amount in category_totals.items():
-            cat_id = f"cat_{node_id}"
-            category_ids[category] = cat_id
-            nodes.append({"name": category or "Other", "id": cat_id})
-            links.append({
-                "source": "income",
-                "target": cat_id,
+            # Clean category name
+            category_name = (category or "Other").capitalize()
+            
+            data.append({
+                "source": "Expenses",
+                "target": category_name,
                 "value": round(amount, 2)
             })
-            node_id += 1
-        
-        # Add merchant nodes and links from categories
-        for item in merchant_data:
-            merchant_id = f"merch_{node_id}"
-            nodes.append({"name": item["merchant"], "id": merchant_id})
-            links.append({
-                "source": category_ids.get(item["category"], "income"),
-                "target": merchant_id,
-                "value": item["amount"]
-            })
-            node_id += 1
         
         return {
             "success": True,
             "chart_type": "sankey",
-            "data": {
-                "nodes": nodes,
-                "links": links
-            },
-            "config": {
-                "nodeWidth": 20,
-                "nodePadding": 20,
-                "linkOpacity": 0.5
-            },
+            "data": data,
+            "config": {},
             "metadata": {
                 "title": f"Money Flow - {target_month.strftime('%B %Y')}",
-                "description": "How your money flows from income to categories to merchants",
+                "description": "How your money flows from income to expense categories",
                 "insights": [
-                    f"Total income: {_format_currency(income_total)}",
-                    f"Total expenses: {_format_currency(sum(category_totals.values()))}",
+                    f"Total income: {_format_currency(total_income)}",
+                    f"Total expenses: {_format_currency(total_expenses)}",
+                    f"Savings: {_format_currency(total_savings)}",
                     f"Categories: {len(category_totals)}"
                 ]
             }
@@ -1296,4 +1292,3 @@ async def generate_budget_breach_curve(user_id: str) -> dict:
             "error": str(e),
             "summary": f"Failed to generate breach curve: {str(e)}"
         }
-

@@ -206,6 +206,13 @@ export function ChatChartRenderer({
           );
 
         case "area":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No area chart data available
+              </div>
+            );
+          }
           return (
             <AreaChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -227,7 +234,39 @@ export function ChatChartRenderer({
           );
 
         case "bar":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No bar chart data available
+              </div>
+            );
+          }
+          return (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={config.xAxis?.dataKey || "name"} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {config.series?.map((series: any, idx: number) => (
+                <Bar
+                  key={idx}
+                  dataKey={series.dataKey}
+                  fill={series.color}
+                  name={series.name}
+                />
+              ))}
+            </BarChart>
+          );
+
         case "waterfall":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No waterfall chart data available
+              </div>
+            );
+          }
           return (
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -247,6 +286,13 @@ export function ChatChartRenderer({
           );
 
         case "line":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No line chart data available
+              </div>
+            );
+          }
           return (
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -266,8 +312,43 @@ export function ChatChartRenderer({
             </LineChart>
           );
 
+        case "slope":
+          // Drift chart - shows last month vs this month
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No drift chart data available
+              </div>
+            );
+          }
+          return (
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={config.xAxis?.dataKey || "category"} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {config.lines?.map((series: any, idx: number) => (
+                <Line
+                  key={idx}
+                  type="monotone"
+                  dataKey={series.dataKey}
+                  stroke={series.stroke}
+                  name={series.name}
+                />
+              ))}
+            </LineChart>
+          );
+
         case "pie":
         case "donut":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No pie chart data available
+              </div>
+            );
+          }
           return (
             <PieChart>
               <Pie
@@ -294,6 +375,13 @@ export function ChatChartRenderer({
           );
 
         case "scatter":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No scatter plot data available
+              </div>
+            );
+          }
           return (
             <ScatterChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -323,6 +411,13 @@ export function ChatChartRenderer({
           );
 
         case "composed":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No composed chart data available
+              </div>
+            );
+          }
           return (
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -365,6 +460,13 @@ export function ChatChartRenderer({
           );
 
         case "heatmap":
+          if (!data || data.length === 0) {
+            return (
+              <div className="text-muted-foreground p-4">
+                No heatmap data available for the selected period
+              </div>
+            );
+          }
           return (
             <div className="text-sm">
               {chartData.metadata?.description && (
@@ -455,12 +557,12 @@ export function ChatChartRenderer({
           );
 
         case "sankey":
-          // Validate and extract Sankey data
-          const nodes = (data as any)?.nodes || [];
-          const links = (data as any)?.links || [];
+          // Data comes as simple array of flows: [{source, target, value}]
+          const flows = Array.isArray(data) ? data : [];
 
-          // Sankey requires at least some nodes and links
-          if (nodes.length === 0 || links.length === 0) {
+          console.log("[Sankey] Flow data:", flows);
+
+          if (flows.length === 0) {
             return (
               <div className="text-muted-foreground p-4">
                 No data available for Sankey diagram
@@ -468,48 +570,92 @@ export function ChatChartRenderer({
             );
           }
 
+          // Extract unique node IDs from flows
+          const nodeIdSet = new Set<string>();
+          flows.forEach((flow: any) => {
+            if (flow.source) nodeIdSet.add(flow.source);
+            if (flow.target) nodeIdSet.add(flow.target);
+          });
+
+          // Create nodes array for Nivo
+          const sankeyNodes = Array.from(nodeIdSet).map((id) => ({
+            id: id,
+          }));
+
+          // Create links array for Nivo
+          const sankeyLinks = flows.map((flow: any) => ({
+            source: flow.source,
+            target: flow.target,
+            value: flow.value,
+          }));
+
           // Transform data for Nivo Sankey format
           const sankeyData = {
-            nodes: nodes.map((node: any) => ({
-              id: node.id || node.name,
-              nodeColor: node.color || "hsl(var(--primary))",
-            })),
-            links: links.map((link: any) => ({
-              source: link.source,
-              target: link.target,
-              value: link.value,
-            })),
+            nodes: sankeyNodes,
+            links: sankeyLinks,
           };
 
-          // Beautiful interactive Sankey diagram using Nivo with constrained height
+          console.log("[Sankey] Transformed for Nivo:", sankeyData);
+
+          // Beautiful interactive Sankey diagram using Nivo
           return (
-            <div className="w-full overflow-hidden" style={{ height: 400 }}>
+            <div
+              className="w-full overflow-hidden"
+              style={{ height: 500, position: "relative" }}
+            >
               <ResponsiveSankey
                 data={sankeyData}
-                margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
+                margin={{ top: 40, right: 160, bottom: 40, left: 80 }}
                 align="justify"
-                colors={{ scheme: "category10" }}
+                colors={[
+                  "#60a5fa", // blue-400
+                  "#34d399", // emerald-400
+                  "#a78bfa", // violet-400
+                  "#fbbf24", // amber-400
+                  "#f87171", // red-400
+                  "#fb923c", // orange-400
+                  "#22d3ee", // cyan-400
+                  "#c084fc", // purple-400
+                  "#4ade80", // green-400
+                  "#818cf8", // indigo-400
+                ]}
                 nodeOpacity={1}
                 nodeHoverOpacity={1}
-                nodeThickness={16}
-                nodeSpacing={18}
+                nodeThickness={18}
+                nodeInnerPadding={3}
+                nodeSpacing={20}
                 nodeBorderWidth={0}
                 nodeBorderColor={{
                   from: "color",
                   modifiers: [["darker", 0.8]],
                 }}
-                nodeBorderRadius={2}
+                nodeBorderRadius={3}
                 linkOpacity={0.5}
                 linkHoverOpacity={0.8}
-                linkHoverOthersOpacity={0.1}
-                linkContract={3}
+                linkHoverOthersOpacity={0.15}
+                linkContract={0}
+                linkBlendMode="normal"
                 enableLinkGradient={true}
-                labelPosition="outside"
+                labelPosition="inside"
                 labelOrientation="horizontal"
                 labelPadding={8}
-                labelTextColor={{
-                  from: "color",
-                  modifiers: [["darker", 1]],
+                labelTextColor="#ffffff"
+                theme={{
+                  text: {
+                    fill: "#e2e8f0",
+                    fontSize: 11,
+                    fontWeight: 600,
+                  },
+                  tooltip: {
+                    container: {
+                      background: "#1e293b",
+                      color: "#e2e8f0",
+                      fontSize: 12,
+                      borderRadius: "6px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                      padding: "12px 16px",
+                    },
+                  },
                 }}
                 animate={true}
                 motionConfig="gentle"
@@ -526,8 +672,8 @@ export function ChatChartRenderer({
       }
     }
 
-    // Budget manager and some special charts don't need ResponsiveContainer
-    if (chart_type === "budget_manager") {
+    // Budget manager and Sankey don't need ResponsiveContainer
+    if (chart_type === "budget_manager" || chart_type === "sankey") {
       return getChartComponent();
     }
 
