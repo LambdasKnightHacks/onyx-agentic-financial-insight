@@ -33,11 +33,12 @@ export default function SignUpForm() {
     <GL className= "fixed inset-0 -z-10" />
  
     <div className="min-h-screen flex flex-col items-center justify-center p-2">
+      <Link href="/" className="inline-flex items-center">
+              <OnyxIcon size={250} className="text-primary-foreground" priority />
+          </Link>
       <div className="w-full max-w-md space-y-20">
         <div className="text-center flex flex-col items-center ">
-          <Link href="/" className="inline-flex items-center">
-              <OnyxIcon size={300} className="text-primary-foreground" priority />
-          </Link>
+          
          
         </div>
 

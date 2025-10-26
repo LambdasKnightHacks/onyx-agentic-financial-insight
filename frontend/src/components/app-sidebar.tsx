@@ -24,7 +24,7 @@ export function AppSidebar() {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
         <Link href="/" className="flex items-center gap-3">
-          <OnyxIcon size={250} className="text-primary-foreground pt-5" priority />
+          <OnyxIcon size={170} className="text-primary-foreground pt-5" priority />
         </Link>
       </div>
       <nav className="space-y-1 p-4">
