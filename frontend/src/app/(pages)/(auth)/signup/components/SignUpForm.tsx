@@ -6,9 +6,11 @@ import { Button } from "@/src/components/ui/button"
 import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Card } from "@/src/components/ui/card"
-import { Sparkles } from "lucide-react"
+import { OnyxIcon } from "@/src/components/logo"
 import Link from "next/link"
 import { signup } from "@/src/lib/auth-actions"
+import { GL } from '@/src/components/gl'
+
 
 export default function SignUpForm() {
   const [loading, setLoading] = useState(false)
@@ -27,26 +29,27 @@ export default function SignUpForm() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <Link href="/" className="inline-flex items-center gap-2 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold">MyFinance</span>
+    <>
+    <GL className= "fixed inset-0 -z-10" />
+ 
+    <div className="min-h-screen flex flex-col items-center justify-center p-2">
+      <Link href="/" className="inline-flex items-center">
+              <OnyxIcon size={250} className="text-primary-foreground" priority />
           </Link>
-          <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
-          <p className="text-muted-foreground mt-2">Get started with MyFinance today</p>
+      <div className="w-full max-w-md space-y-20">
+        <div className="text-center flex flex-col items-center ">
+          
+         
         </div>
 
-        <Card className="p-8">
+        <Card className="p-10 backdrop-blur-sm bg-card/80">
           {error && (
-            <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <div className="mb-5 p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               {error}
             </div>
           )}
-          <form action={handleSubmit} className="space-y-6">
+          <form action={handleSubmit} className="space-y-8">
+             <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
             <div className="space-y-2">
               <Label htmlFor="first-name">First Name</Label>
               <Input
@@ -107,5 +110,7 @@ export default function SignUpForm() {
         </p>
       </div>
     </div>
+     </>
+    
   )
 }
