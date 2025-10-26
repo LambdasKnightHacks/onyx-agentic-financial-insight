@@ -392,6 +392,40 @@ class plaidController {
       });
     }
   }
+
+  // Create a sandbox transaction for testing
+  async createSandboxTransaction(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, itemId } = req.query;
+
+      if (!userId || !itemId) {
+        res
+          .status(400)
+          .json({ error: "userId and itemId are required in query params" });
+        return;
+      }
+
+      // Get access token for this item
+      const accessToken = await plaidService.getAccessToken(
+        userId as string,
+        itemId as string
+      );
+
+      const result = await plaidService.createSandboxTransaction(accessToken);
+
+      res.json({
+        success: true,
+        message: "Sandbox transaction created",
+        result: result.data,
+      });
+    } catch (error: any) {
+      console.error("Error creating sandbox transaction:", error);
+      res.status(500).json({
+        error: "Failed to create sandbox transaction",
+        details: error.message,
+      });
+    }
+  }
 }
 
 export default new plaidController();

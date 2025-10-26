@@ -15,4 +15,12 @@ router.post("/webhook", plaidController.webhook);
 router.get("/status", plaidController.getStatus);
 router.post("/sync", plaidController.syncTransactions);
 
+router.get("/transactions/refresh", (req, res) =>
+  plaidController.syncTransactions(req, res)
+);
+
+// Create sandbox transactions for testing
+router.get("/sandbox/transactions/create", (req, res) =>
+  plaidController.createSandboxTransaction(req, res)
+);
 export default router;

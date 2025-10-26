@@ -277,6 +277,28 @@ class PlaidService {
       throw error;
     }
   }
+
+  async createSandboxTransaction(accessToken: string): Promise<any> {
+    try {
+      const transactionDate = new Date();
+      const transactionData = {
+        amount: 12.34,
+        date_posted: transactionDate.toISOString().split("T")[0],
+        date_transacted: transactionDate.toISOString().split("T")[0],
+        description: "Test transaction from sandbox",
+      };
+
+      const request = {
+        access_token: accessToken,
+        transactions: [transactionData],
+      };
+
+      return await (this.client as any).sandboxTransactionsCreate(request);
+    } catch (error) {
+      console.error("Error creating sandbox transaction:", error);
+      throw error;
+    }
+  }
 }
 
 export default new PlaidService();
