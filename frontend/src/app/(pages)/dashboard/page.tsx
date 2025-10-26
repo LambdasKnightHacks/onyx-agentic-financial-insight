@@ -6,7 +6,9 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, DollarSign, ExternalLink } from "lucide-react";
-import type { Account, Transaction, FraudAlert } from "@/src/lib/types";
+import type { Account, Transaction } from "@/src/lib/types";
+import type { Alert } from "./alerts/types";
+import { getAlertTitle, getAlertIcon, getSeverityColor } from "./alerts/utils";
 import { PlaidLinkButton } from "@/src/components/plaid-link-button";
 import { useAuth } from "@/src/components/auth-context";
 
@@ -16,7 +18,7 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     []
   );
-  const [alerts, setAlerts] = useState<FraudAlert[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,10 +29,10 @@ export default function DashboardPage() {
         const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes] =
           await Promise.all([
             fetch("/api/accounts"),
-            fetch("/api/transactions?limit=5"),
-            fetch("/api/fraud?status=new"),
-            fetch("/api/insights?limit=5"),
-            fetch("/api/budgets?limit=5")
+            fetch("/api/transactions?"),
+            fetch("/api/alerts?status=active"),
+            fetch("/api/insights?"),
+            fetch("/api/budgets?")
           ]);
 
         const accountsData = await accountsRes.json();
@@ -228,7 +230,7 @@ export default function DashboardPage() {
                   <Lightbulb className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Advice</h3>
+                  <h3 className="font-semibold">Insights</h3>
                   <p className="text-2xl font-bold mt-1">{insights.length}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     insights available
@@ -248,7 +250,7 @@ export default function DashboardPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold">Alerts</h3>
                   <p className="text-2xl font-bold mt-1">
-                    {alerts.filter((a) => a.status === "new").length}
+                    {alerts.length}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     to review
@@ -319,7 +321,7 @@ export default function DashboardPage() {
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Security Alerts</h2>
+            <h2 className="text-xl font-semibold">Alerts</h2>
             <Button variant="ghost" size="sm" asChild>
               <a href="/dashboard/alerts">View all</a>
             </Button>
@@ -330,50 +332,43 @@ export default function DashboardPage() {
                 <ShieldAlert className="h-12 w-12 text-green-600 mx-auto mb-3" />
                 <p className="text-sm font-medium">All clear!</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  No security alerts at this time
+                  No alerts at this time
                 </p>
               </div>
             ) : (
-              alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="flex items-start gap-4 py-3 border-b last:border-0"
-                >
+              alerts.map((alert) => {
+                const AlertIcon = getAlertIcon(alert.type)
+                const severityColors = getSeverityColor(alert.severity)
+                const title = getAlertTitle(alert)
+                
+                return (
                   <div
-                    className={`p-2 rounded-lg ${
-                      alert.severity === "high"
-                        ? "bg-red-100 dark:bg-red-950"
-                        : alert.severity === "medium"
-                        ? "bg-yellow-100 dark:bg-yellow-950"
-                        : "bg-blue-100 dark:bg-blue-950"
-                    }`}
+                    key={alert.id}
+                    className="flex items-start gap-4 py-3 border-b last:border-0"
                   >
-                    <ShieldAlert
-                      className={`h-4 w-4 ${
-                        alert.severity === "high"
-                          ? "text-red-600 dark:text-red-400"
-                          : alert.severity === "medium"
-                          ? "text-yellow-600 dark:text-yellow-400"
-                          : "text-blue-600 dark:text-blue-400"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="font-medium">{alert.merchant}</div>
-                    <div className="text-sm text-muted-foreground">
-                      ${alert.amount.toFixed(2)}
+                    <div className={`p-2 rounded-lg ${severityColors.bg}`}>
+                      <AlertIcon className={`h-4 w-4 ${severityColors.text}`} />
                     </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="font-medium">{title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {alert.type === 'budget' 
+                          ? alert.reason?.split(':')[0] || 'Budget alert'
+                          : alert.amount 
+                            ? `$${Math.abs(alert.amount).toFixed(2)}`
+                            : alert.date
+                        }
+                      </div>
+                    </div>
+                    <Badge
+                      variant={severityColors.badge}
+                      className="text-xs capitalize"
+                    >
+                      {alert.severity}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={
-                      alert.severity === "high" ? "destructive" : "secondary"
-                    }
-                    className="text-xs capitalize"
-                  >
-                    {alert.severity}
-                  </Badge>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </Card>

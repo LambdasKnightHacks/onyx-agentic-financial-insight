@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/src/lib/supabase"
 import { getUserIdFromRequest } from "@/src/lib/auth-utils"
 
+// manages all budget operations
 export async function GET(request: NextRequest) {
   try {
     const userId = await getUserIdFromRequest(request)

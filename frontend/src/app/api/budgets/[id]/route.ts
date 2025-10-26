@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/src/lib/supabase"
 import { getUserIdFromRequest } from "@/src/lib/auth-utils"
 
+// manages single budget crud operations
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
