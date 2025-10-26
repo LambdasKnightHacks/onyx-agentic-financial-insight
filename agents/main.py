@@ -17,6 +17,7 @@ from websocket.publisher import websocket_publisher
 
 from transaction_agent.agent import root_agent
 from chat_agent.agent import create_user_agent
+from financial_summary import generate_financial_summary, store_summary, get_latest_summary, should_regenerate_summary
 
 app = FastAPI()
 
@@ -57,6 +58,17 @@ class ChatResponse(BaseModel):
     charts: list[Dict[str, Any]] = []
     session_id: str
     timestamp: str
+
+class FinancialSummaryRequest(BaseModel):
+    user_id: str
+    period_days: int = 30
+
+class FinancialSummaryResponse(BaseModel):
+    status: str
+    summary_id: str | None = None
+    summary: Dict[str, Any] | None = None
+    message: str
+    generated_at: str
 
 @app.post("/api/transaction/analyze", response_model=TransactionResponse)
 async def analyze_transaction(request: TransactionRequest):
@@ -246,6 +258,89 @@ async def chat_with_agent(request: ChatRequest):
             timestamp=datetime.now().isoformat()
         )
 
+@app.post("/api/financial-summary/generate", response_model=FinancialSummaryResponse)
+async def generate_and_store_financial_summary(request: FinancialSummaryRequest):
+    """
+    Generate and store a comprehensive financial summary.
+    
+    Called on user login to generate a complete financial overview.
+    Returns cached summary if available and fresh (< 6 hours old).
+    
+    Expected request format:
+    {
+        "user_id": "uuid",
+        "period_days": 30  # Optional, defaults to 30
+    }
+    """
+    try:
+        # Check if we should regenerate (summary doesn't exist or is stale)
+        should_regenerate = await should_regenerate_summary(request.user_id, max_age_hours=6)
+        
+        if not should_regenerate:
+            # Return cached summary
+            cached_summary = await get_latest_summary(request.user_id)
+            if cached_summary:
+                return FinancialSummaryResponse(
+                    status="success",
+                    summary_id=cached_summary["id"],
+                    summary=cached_summary.get("summary_data"),
+                    message="Returning cached summary",
+                    generated_at=cached_summary.get("created_at", datetime.now().isoformat())
+                )
+        
+        # Generate new summary
+        result = await generate_financial_summary(request.user_id, request.period_days)
+        
+        if not result.get("success"):
+            return FinancialSummaryResponse(
+                status="error",
+                summary_id=None,
+                summary=None,
+                message=f"Failed to generate summary: {result.get('error')}",
+                generated_at=datetime.now().isoformat()
+            )
+        
+        summary_data = result.get("summary")
+        
+        # Store in database
+        store_result = await store_summary(request.user_id, summary_data)
+        
+        if store_result.get("success"):
+            return FinancialSummaryResponse(
+                status="success",
+                summary_id=store_result.get("summary_id"),
+                summary=summary_data,
+                message="Summary generated and stored successfully",
+                generated_at=summary_data.get("period", {}).get("generated_at", datetime.now().isoformat())
+            )
+        elif store_result.get("already_exists"):
+            # Summary already exists for this period, return it
+            cached_summary = await get_latest_summary(request.user_id)
+            return FinancialSummaryResponse(
+                status="success",
+                summary_id=cached_summary["id"] if cached_summary else None,
+                summary=summary_data,
+                message="Summary generated (already existed in database)",
+                generated_at=summary_data.get("period", {}).get("generated_at", datetime.now().isoformat())
+            )
+        else:
+            return FinancialSummaryResponse(
+                status="partial",
+                summary_id=None,
+                summary=summary_data,
+                message=f"Generated but storage failed: {store_result.get('error')}",
+                generated_at=summary_data.get("period", {}).get("generated_at", datetime.now().isoformat())
+            )
+            
+    except Exception as e:
+        return FinancialSummaryResponse(
+            status="error",
+            summary_id=None,
+            summary=None,
+            message=f"Summary generation failed: {str(e)}",
+            generated_at=datetime.now().isoformat()
+        )
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -253,7 +348,8 @@ async def health_check():
         "status": "healthy", 
         "services": {
             "transaction-analyzer": "active",
-            "financial-chat": "active"
+            "financial-chat": "active",
+            "financial-summary": "active"
         },
         "version": "1.0.0"
     }
