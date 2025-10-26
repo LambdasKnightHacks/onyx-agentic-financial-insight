@@ -14,7 +14,21 @@ export async function login(formData: FormData) {
 
   const { error } = await supabase.auth.signInWithPassword(data);
 
+  // Debug: session after login
+  try {
+    const { data: sess } = await supabase.auth.getSession();
+    console.log(
+      "[login] error:",
+      error?.message,
+      "hasSession:",
+      !!sess?.session
+    );
+  } catch (e) {
+    console.log("[login] getSession threw:", (e as Error)?.message);
+  }
+
   if (error) {
+    console.error("Login error:", error);
     redirect("/error");
   }
 
@@ -47,7 +61,7 @@ export async function signup(formData: FormData) {
   }
 
   // Check if email confirmation is required
-  if (data?.user && !data.session) {
+  if (data?.user && data.session) {
     // Email confirmation required
     redirect("/signup/check-email");
   }

@@ -52,21 +52,19 @@ export function PlaidLinkButton({
         setIsLoading(true);
 
         // Exchange public token and save connection
-        // Using snake_case 'public_token' to match Plaid API conventions
         const response = await fetch("/api/plaid/connect-bank", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            public_token,
+            public_token: public_token,
             metadata,
           }),
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to connect bank account");
+          throw new Error("Failed to connect bank account");
         }
 
         const data = await response.json();
@@ -78,17 +76,13 @@ export function PlaidLinkButton({
         }
 
         alert(
-          ` Successfully connected to ${
+          `✅ Successfully connected to ${
             metadata?.institution?.name || "your bank"
           }!`
         );
       } catch (error) {
         console.error("Error connecting bank:", error);
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to connect bank account. Please try again.";
-        alert(message);
+        alert("Failed to connect bank account. Please try again.");
       } finally {
         setIsLoading(false);
       }

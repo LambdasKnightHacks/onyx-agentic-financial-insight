@@ -1,18 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/src/lib/api-auth";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 /**
  * POST /api/plaid/create-link-token
  *
- * Generates a Plaid Link token for the authenticated user.
- * This token is used to initialize the Plaid Link component.
+ * Creates a Plaid link token for the authenticated user.
  *
- * @returns {link_token: string, expiration: string}
+ * @returns {link_token: string}
  */
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user using Supabase SSR
-    const { user, error } = await getAuthenticatedUser();
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+
+    // Debug: env presence
+    console.log("[create-link-token] envs:", {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasAnon: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      backendUrl:
+        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001",
+    });
+
+    // Debug: cookie names
+    try {
+      const names = (await cookies()).getAll().map((c) => c.name);
+      console.log("[create-link-token] cookieNames:", names);
+    } catch (e) {
+      console.log(
+        "[create-link-token] cookies() getAll threw:",
+        (e as Error)?.message
+      );
+    }
+
+    // Authenticate user
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    console.log("[create-link-token] user:", {
+      id: user?.id,
+      email: user?.email,
+      error: error?.message,
+    });
 
     if (error || !user) {
       return NextResponse.json(
@@ -21,11 +62,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get backend URL from environment
+    // Get backend URL
     const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
     // Forward request to Express backend with user ID
+    console.log(
+      "[create-link-token] -> backend POST",
+      `${backendUrl}/api/plaid/create-link-token`
+    );
     const response = await fetch(`${backendUrl}/api/plaid/create-link-token`, {
       method: "POST",
       headers: {
@@ -37,12 +82,17 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    // Handle backend errors
+    console.log("[create-link-token] backend status:", response.status);
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: "Failed to create link token",
-      }));
-
+      const bodyText = await response.text().catch(() => "<no body>");
+      console.log("[create-link-token] backend body:", bodyText);
+      const errorData = (() => {
+        try {
+          return JSON.parse(bodyText);
+        } catch {
+          return { error: "Failed to create link token" };
+        }
+      })();
       return NextResponse.json(errorData, { status: response.status });
     }
 

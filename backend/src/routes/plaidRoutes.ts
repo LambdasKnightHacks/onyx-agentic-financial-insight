@@ -13,6 +13,27 @@ router.post("/auth", plaidController.getAuthData);
 router.post("/connect-bank", plaidController.connectBank);
 router.post("/webhook", plaidController.webhook);
 router.get("/status", plaidController.getStatus);
-router.post("/sync", plaidController.syncTransactions);
+router.post("/sync-transactions", plaidController.syncTransactions);
 
+// Manually trigger a transaction sync for a user or a specific item
+router.post("/transactions/sync", (req, res) =>
+  plaidController.syncTransactions(req, res)
+);
+router.get("/transactions/refresh", (req, res) =>
+  plaidController.syncTransactions(req, res)
+);
+
+// Create a sandbox transaction for testing
+router.get("/sandbox/transactions/create", (req, res) =>
+  plaidController.createSandboxTransaction(req, res)
+);
+
+router.get("/transactions/refresh", (req, res) =>
+  plaidController.syncTransactions(req, res)
+);
+
+// Create sandbox transactions for testing
+router.get("/sandbox/transactions/create", (req, res) =>
+  plaidController.createSandboxTransaction(req, res)
+);
 export default router;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/src/lib/api-auth";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 /**
  * POST /api/plaid/connect-bank
@@ -12,8 +13,48 @@ import { getAuthenticatedUser } from "@/src/lib/api-auth";
  */
 export async function POST(request: NextRequest) {
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+
+    // Debug: env presence
+    console.log("[connect-bank] envs:", {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasAnon: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL,
+    });
+
+    // Debug: cookie names
+    try {
+      const names = (await cookies()).getAll().map((c) => c.name);
+      console.log("[connect-bank] cookieNames:", names);
+    } catch (e) {
+      console.log(
+        "[connect-bank] cookies() getAll threw:",
+        (e as Error)?.message
+      );
+    }
+
     // Authenticate user
-    const { user, error } = await getAuthenticatedUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    console.log("[connect-bank] user:", {
+      id: user?.id,
+      email: user?.email,
+      error: error?.message,
+    });
 
     if (error || !user) {
       return NextResponse.json(
@@ -38,6 +79,10 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
     // Forward to Express backend
+    console.log(
+      "[connect-bank] -> backend POST",
+      `${backendUrl}/api/plaid/connect-bank`
+    );
     const response = await fetch(`${backendUrl}/api/plaid/connect-bank`, {
       method: "POST",
       headers: {
@@ -45,16 +90,22 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         userId: user.id,
-        publicToken: public_token,
+        public_token: public_token,
         metadata,
       }),
     });
 
+    console.log("[connect-bank] backend status:", response.status);
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        error: "Failed to connect bank account",
-      }));
-
+      const bodyText = await response.text().catch(() => "<no body>");
+      console.log("[connect-bank] backend body:", bodyText);
+      const errorData = (() => {
+        try {
+          return JSON.parse(bodyText);
+        } catch {
+          return { error: "Failed to connect bank account" };
+        }
+      })();
       return NextResponse.json(errorData, { status: response.status });
     }
 

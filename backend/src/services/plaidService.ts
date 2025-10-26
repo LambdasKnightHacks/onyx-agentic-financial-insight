@@ -18,6 +18,7 @@ import {
   PlaidTransaction,
 } from "../utils/database";
 import { encrypt, decrypt } from "../utils/encryption";
+import { v4 as uuidv4 } from "uuid";
 
 class PlaidService {
   private client: PlaidApi;
@@ -40,31 +41,25 @@ class PlaidService {
     );
   }
 
-  async createLinkToken(userId: string, webhookUrl?: string): Promise<any> {
-    try {
-      // Note: auth_type_select_enabled is not yet in the TypeScript types but is documented
-      // in the Plaid API: https://plaid.com/docs/api/link/#linktokencreate
-      const request: any = {
-        user: { client_user_id: userId },
-        client_name: "MyFinance",
-        products: [Products.Auth, Products.Transactions],
-        country_codes: [CountryCode.Us],
-        language: "en",
-        webhook: webhookUrl || process.env.WEBHOOK_URL,
-      };
+  async createLinkToken(
+    userId: string,
+    email: string,
+    webhookUrl?: string
+  ): Promise<any> {
+    const request: LinkTokenCreateRequest = {
+      user: { client_user_id: userId },
+      client_name: "MyFinance",
+      products: [Products.Auth, Products.Transactions],
+      country_codes: [CountryCode.Us],
+      language: "en",
+      webhook: webhookUrl || process.env.WEBHOOK_URL,
+      user_token: undefined, // Explicitly undefined
+    };
 
-      console.log("[Plaid Service] Creating link token for user:", userId);
-      const response = await this.client.linkTokenCreate(request);
-      console.log("[Plaid Service] Link token created successfully");
-
-      return response;
-    } catch (error: any) {
-      console.error(
-        "[Plaid Service] Error creating link token:",
-        error.response?.data || error.message
-      );
-      throw error;
+    if (email) {
+      request.user.email_address = email;
     }
+    return await this.client.linkTokenCreate(request);
   }
 
   async exchangeToken(publicToken: string): Promise<any> {
@@ -257,7 +252,7 @@ class PlaidService {
       const savedAccounts: PlaidAccount[] = [];
 
       for (const account of accounts) {
-        const accountData: any = {
+        const accountData = {
           user_id: userId,
           name: account.name,
           type: account.type,
@@ -322,6 +317,28 @@ class PlaidService {
       }
     } catch (error) {
       console.error("Error resetting item status:", error);
+      throw error;
+    }
+  }
+
+  async createSandboxTransaction(accessToken: string): Promise<any> {
+    try {
+      const transactionDate = new Date();
+      const transactionData = {
+        amount: 12.34,
+        date_posted: transactionDate.toISOString().split("T")[0],
+        date_transacted: transactionDate.toISOString().split("T")[0],
+        description: "Test transaction from sandbox",
+      };
+
+      const request = {
+        access_token: accessToken,
+        transactions: [transactionData],
+      };
+
+      return await (this.client as any).sandboxTransactionsCreate(request);
+    } catch (error) {
+      console.error("Error creating sandbox transaction:", error);
       throw error;
     }
   }
