@@ -99,8 +99,7 @@ export const useWebSocket = (userId?: string) => {
         }
       };
 
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
+      wsRef.current.onerror = () => {
         // Only log error if we were previously connected
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           addLog(`❌ WebSocket error occurred`);

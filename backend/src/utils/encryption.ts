@@ -12,7 +12,7 @@ const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
 
 export function encrypt(text: string): string {
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipher(ALGORITHM, key);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   cipher.setAAD(Buffer.from("plaid-token", "utf8"));
 
   let encrypted = cipher.update(text, "utf8", "hex");
@@ -34,7 +34,7 @@ export function decrypt(encryptedText: string): string {
   const authTag = Buffer.from(parts[1], "hex");
   const encrypted = parts[2];
 
-  const decipher = crypto.createDecipher(ALGORITHM, key);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAAD(Buffer.from("plaid-token", "utf8"));
   decipher.setAuthTag(authTag);
 

@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     const { user, error } = await getAuthenticatedUser();
 
     if (error || !user) {
+      console.error("[Connect Bank] Authentication failed:", error);
       return NextResponse.json(
         { error: "Unauthorized - Please log in" },
         { status: 401 }
@@ -27,17 +28,21 @@ export async function POST(request: NextRequest) {
     const { public_token, metadata } = body;
 
     if (!public_token) {
+      console.error("[Connect Bank] Missing public_token in request");
       return NextResponse.json(
         { error: "Missing public_token" },
         { status: 400 }
       );
     }
 
+    console.log("[Connect Bank] Processing request for user:", user.id);
+    console.log("[Connect Bank] Institution:", metadata?.institution?.name);
+
     // Get backend URL
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
-    // Forward to Express backend
+    // Forward to Express backend with correct parameter name
     const response = await fetch(`${backendUrl}/api/plaid/connect-bank`, {
       method: "POST",
       headers: {
@@ -55,10 +60,13 @@ export async function POST(request: NextRequest) {
         error: "Failed to connect bank account",
       }));
 
+      console.error("[Connect Bank] Backend error:", errorData);
       return NextResponse.json(errorData, { status: response.status });
     }
 
     const data = await response.json();
+    console.log("[Connect Bank] Success - Item ID:", data.item_id);
+
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("[Plaid Connect Bank Error]:", error);

@@ -44,6 +44,14 @@ export default function DashboardPage() {
         const alertsData = await alertsRes.json();
         const insightsData = await insightsRes.json();
 
+        // Debug logs
+        console.log(
+          "[Dashboard] Transactions API status:",
+          transactionsRes.status
+        );
+        console.log("[Dashboard] Transactions data:", transactionsData);
+        console.log("[Dashboard] Is array?", Array.isArray(transactionsData));
+
         // Handle error responses
         setAccounts(Array.isArray(accountsData) ? accountsData : []);
         setRecentTransactions(
@@ -89,12 +97,12 @@ export default function DashboardPage() {
     if (metadata?.name) return metadata.name;
     if (metadata?.full_name) return metadata.full_name;
     if (metadata?.first_name) return metadata.first_name;
-    
+
     // Fall back to email if no defined name
     if (user.email) {
       return user.email.split("@")[0];
     }
-    
+
     return "";
   };
 

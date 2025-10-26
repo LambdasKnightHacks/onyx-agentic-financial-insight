@@ -1,102 +1,102 @@
-export type AccountType = "checking" | "savings" | "credit" | "loan"
-export type AccountStatus = "active" | "frozen" | "closed"
-export type TransactionStatus = "posted" | "pending"
-export type AlertSeverity = "high" | "medium" | "low"
-export type AlertStatus = "new" | "ack" | "resolved"
+export type AccountType = "checking" | "savings" | "credit" | "loan";
+export type AccountStatus = "active" | "frozen" | "closed";
+export type TransactionStatus = "new" | "processed";
+export type AlertSeverity = "high" | "medium" | "low";
+export type AlertStatus = "new" | "ack" | "resolved";
 
 export interface Account {
-  id: string
-  institution: string
-  nickname: string
-  last4: string
-  type: AccountType
-  currency: "USD"
-  balanceCurrent: number
-  balanceAvailable?: number
-  status: AccountStatus
+  id: string;
+  institution: string;
+  nickname: string;
+  last4: string;
+  type: AccountType;
+  currency: "USD";
+  balanceCurrent: number;
+  balanceAvailable?: number;
+  status: AccountStatus;
 }
 
 export interface Transaction {
-  id: string
-  accountId: string
-  date: string
-  merchant: string
-  amount: number
-  currency: "USD"
-  category: string
-  labels: string[]
-  status: TransactionStatus
+  id: string;
+  accountId: string;
+  date: string;
+  merchant: string;
+  amount: number;
+  currency: "USD";
+  category: string;
+  labels: string[];
+  status: TransactionStatus;
   agent: {
-    categoryConfidence: number
-    fraudScore: number
-    explanations: string[]
-  }
+    categoryConfidence: number;
+    fraudScore: number;
+    explanations: string[];
+  };
   raw: {
-    plaidTransactionId: string
-    mcc?: string
-    location?: string
-    channel?: string
-  }
+    plaidTransactionId: string;
+    mcc?: string;
+    location?: string;
+    channel?: string;
+  };
 }
 
 export interface Insight {
-  id: string
-  title: string
-  metricDelta: number
-  confidence: number
-  why: string[]
+  id: string;
+  title: string;
+  metricDelta: number;
+  confidence: number;
+  why: string[];
   cta?: {
-    label: string
-    action: string
-    params?: Record<string, any>
-  }
+    label: string;
+    action: string;
+    params?: Record<string, any>;
+  };
 }
 
 export interface FraudAlert {
-  id: string
-  severity: AlertSeverity
-  riskScore: number
-  reasonCodes: string[]
-  evidenceTxnIds: string[]
-  status: AlertStatus
-  merchant: string
-  amount: number
-  date: string
+  id: string;
+  severity: AlertSeverity;
+  riskScore: number;
+  reasonCodes: string[];
+  evidenceTxnIds: string[];
+  status: AlertStatus;
+  merchant: string;
+  amount: number;
+  date: string;
 }
 
 export interface AutomationRule {
-  id: string
-  enabled: boolean
-  name: string
+  id: string;
+  enabled: boolean;
+  name: string;
   trigger: {
-    type: string
+    type: string;
     conditions: Array<{
-      field: string
-      op: string
-      value: any
-    }>
-  }
+      field: string;
+      op: string;
+      value: any;
+    }>;
+  };
   actions: Array<{
-    type: string
-    severity?: string
-  }>
-  createdBy: string
-  version: number
+    type: string;
+    severity?: string;
+  }>;
+  createdBy: string;
+  version: number;
 }
 
 export interface AgentTask {
-  id: string
-  agent: "advisor" | "fraud" | "automation"
-  status: "pending" | "in-progress" | "completed"
-  description: string
-  timestamp: string
+  id: string;
+  agent: "advisor" | "fraud" | "automation";
+  status: "pending" | "in-progress" | "completed";
+  description: string;
+  timestamp: string;
 }
 
 export interface AuditLog {
-  id: string
-  timestamp: string
-  agent: string
-  action: string
-  details: string
-  userId?: string
+  id: string;
+  timestamp: string;
+  agent: string;
+  action: string;
+  details: string;
+  userId?: string;
 }
