@@ -1,6 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,18 +7,13 @@ import {
   ArrowLeftRight,
   Lightbulb,
   ShieldAlert,
-  Zap,
-  Settings, BarChart3,
+  DollarSign,
+  Settings,
+  BarChart3,
   MessageCircle,
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
-=======
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { LayoutDashboard, ArrowLeftRight, Lightbulb, ShieldAlert, DollarSign, Settings, BarChart3 } from "lucide-react"
-import { cn } from "@/src/lib/utils"
->>>>>>> mattData
-import { OnyxIcon } from "@/src/components/logo"
+import { OnyxIcon } from "@/src/components/logo";
 
 
 const navItems = [

@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import { cn } from "@/src/lib/utils";
 import { useState } from "react";
@@ -13,11 +12,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu"
-import { Badge } from "@/src/components/ui/badge"
-import { useAuth } from "@/src/components/auth-context"
-import { signout } from "@/src/lib/auth-actions"
-
+} from "@/src/components/ui/dropdown-menu";
+import { Badge } from "@/src/components/ui/badge";
+import { useAuth } from "@/src/components/auth-context";
+import { signout } from "@/src/lib/auth-actions";
 import { useRouter } from "next/navigation";
 
 export function AppHeader() {
@@ -28,20 +26,13 @@ export function AppHeader() {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    setIsSyncing(true);
     // Simulate sync
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setLastSync("Just now");
-    setIsSyncing(false);
-  };
     await new Promise((resolve) => setTimeout(resolve, 2000));
     setLastSync("Just now");
     setIsSyncing(false);
   };
 
   const handleSignOut = async () => {
-    await signout();
-  };
     await signout();
   };
 
@@ -70,15 +61,6 @@ export function AppHeader() {
           <RefreshCw
             className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")}
           />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={isSyncing}
-        >
-          <RefreshCw
-            className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")}
-          />
           Sync Now
         </Button>
         <DropdownMenu>
@@ -88,7 +70,6 @@ export function AppHeader() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{user?.email || "My Account"}</DropdownMenuLabel>
             <DropdownMenuLabel>{user?.email || "My Account"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -105,6 +86,5 @@ export function AppHeader() {
         </DropdownMenu>
       </div>
     </header>
-  );
   );
 }

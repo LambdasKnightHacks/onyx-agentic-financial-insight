@@ -1,6 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -99,16 +98,6 @@ interface FinancialSummary {
     runway_days: number;
   };
 }
-=======
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Badge } from "@/src/components/ui/badge"
-import { Button } from "@/src/components/ui/button"
-import { Skeleton } from "@/src/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/src/components/ui/alert"
-import { TrendingUp, TrendingDown, Calendar, Target, Lightbulb, ArrowRight } from "lucide-react"
-import type { Insight } from "@/src/lib/types"
->>>>>>> mattData
 
 export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -190,30 +179,11 @@ export default function InsightsPage() {
     );
   }
 
-<<<<<<< HEAD
   // Calculate summary metrics
   const highConfidenceInsights = insights.filter((i) => i.confidence > 0.8);
   const totalPotentialSavings = insights
     .filter((i) => i.cta?.params?.amount)
     .reduce((sum, i) => sum + (i.cta?.params?.amount || 0), 0);
-=======
-  // Generate simple summary
-  const generateSummary = () => {
-    if (insights.length === 0) {
-      return {
-        primary: "You don't have any insights yet. As you connect accounts and make transactions, our AI agents will analyze your spending patterns and provide personalized recommendations.",
-        secondary: "Connect a bank account to get started with AI-powered financial insights and recommendations."
-      }
-    }
-
-    return {
-      primary: `You have <strong class="text-primary">${insights.length} insight${insights.length === 1 ? '' : 's'}</strong> based on your recent activity.`,
-      secondary: `Focus on managing your expenses to stay on track with your financial goals.`
-    }
-  }
-
-  const summary = generateSummary()
->>>>>>> mattData
 
   return (
     <div className="px-8 pb-8 space-y-6">
@@ -234,21 +204,14 @@ export default function InsightsPage() {
             <div className="flex-1">
               <CardTitle className="text-xl">Your Financial Summary</CardTitle>
               <CardDescription className="mt-1.5 text-base leading-relaxed">
-<<<<<<< HEAD
                 {financialSummary
                   ? `Based on your activity from ${financialSummary.period.start_date} to ${financialSummary.period.end_date}`
                   : "Analyzing your financial data..."}
-=======
-                {insights.length > 0 
-                  ? "Based on your recent spending patterns and account activity, here's what you should focus on:"
-                  : "Get started with AI-powered financial insights"}
->>>>>>> mattData
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-<<<<<<< HEAD
           {financialSummary ? (
             <>
               {/* Financial Overview */}
@@ -505,22 +468,6 @@ export default function InsightsPage() {
               <p className="text-muted-foreground">
                 Loading your financial summary...
               </p>
-=======
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: summary.primary }} />
-            <p className="text-foreground leading-relaxed">{summary.secondary}</p>
-          </div>
-          {insights.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Badge variant="secondary" className="gap-1.5">
-                <Target className="h-3 w-3" />
-                {insights.length} Total Insights
-              </Badge>
-              <Badge variant="secondary" className="gap-1.5">
-                <Calendar className="h-3 w-3" />
-                Updated Today
-              </Badge>
->>>>>>> mattData
             </div>
           )}
         </CardContent>
@@ -558,7 +505,6 @@ export default function InsightsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-<<<<<<< HEAD
               {/* Confidence */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -586,8 +532,6 @@ export default function InsightsPage() {
                 </ul>
               </div>
 
-=======
->>>>>>> mattData
               {/* CTA */}
               {insight.cta && (
                 <Button className="w-full gap-2" variant="default">
