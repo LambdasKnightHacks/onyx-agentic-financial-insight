@@ -116,14 +116,6 @@ export function BudgetCard({ budget, spending, onEdit, onDelete, onToggleActive 
                 <span>Rollover enabled</span>
               </>
             )}
-            {budget.created_at && (
-              <>
-                <span>•</span>
-                <span>
-                  Created {new Date(budget.created_at).toLocaleDateString()}
-                </span>
-              </>
-            )}
           </div>
         </div>
 

@@ -368,7 +368,7 @@ export default function DashboardPage() {
               <a href="/dashboard/alerts">View all</a>
             </Button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {alerts.length === 0 ? (
               <div className="text-center py-8">
                 <ShieldAlert className="h-12 w-12 text-green-600 mx-auto mb-3" />
@@ -382,32 +382,60 @@ export default function DashboardPage() {
                 const AlertIcon = getAlertIcon(alert.type)
                 const severityColors = getSeverityColor(alert.severity)
                 const title = getAlertTitle(alert)
+                const isBudgetAlert = alert.type === 'budget'
+                const isFraudAlert = alert.type === 'fraud'
+                const isCritical = alert.severity === 'critical' || alert.severity === 'high'
                 
                 return (
                   <div
                     key={alert.id}
-                    className="flex items-start gap-4 py-3 border-b last:border-0"
+                    className={`flex items-start gap-4 p-4 rounded-lg border transition-all hover:shadow-md ${
+                      isFraudAlert && isCritical
+                        ? 'bg-red-500/10 border-red-500/30 border-l-4'
+                        : isFraudAlert
+                        ? 'bg-orange-500/10 border-orange-500/30 border-l-4'
+                        : 'border-border'
+                    }`}
                   >
-                    <div className={`p-2 rounded-lg ${severityColors.bg}`}>
-                      <AlertIcon className={`h-4 w-4 ${severityColors.text}`} />
+                    <div className={`flex-shrink-0 relative ${
+                      isFraudAlert && isCritical ? 'animate-pulse' : ''
+                    }`}>
+                      <div className={`p-3 rounded-xl shadow-lg ${
+                        isFraudAlert 
+                          ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                          : isBudgetAlert
+                          ? 'bg-gradient-to-br from-amber-500 to-orange-500'
+                          : severityColors.bg
+                      }`}>
+                        <AlertIcon className="h-5 w-5 text-white" />
+                      </div>
+                      {isCritical && (
+                        <div className="absolute -top-1 -right-1 h-3 w-3 bg-red-600 rounded-full border-2 border-background animate-ping" />
+                      )}
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="font-medium">{title}</div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-base text-foreground truncate">
+                          {title}
+                        </h3>
+                        <Badge
+                          variant={isCritical ? "destructive" : "secondary"}
+                          className={`text-xs capitalize font-semibold ${
+                            isCritical ? 'animate-pulse' : ''
+                          }`}
+                        >
+                          {alert.severity}
+                        </Badge>
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {alert.type === 'budget' 
+                        {isBudgetAlert 
                           ? alert.reason?.split(':')[0] || 'Budget alert'
-                          : alert.amount 
+                          : alert.amount !== undefined
                             ? `$${Math.abs(alert.amount).toFixed(2)}`
                             : alert.date
                         }
                       </div>
                     </div>
-                    <Badge
-                      variant={severityColors.badge}
-                      className="text-xs capitalize"
-                    >
-                      {alert.severity}
-                    </Badge>
                   </div>
                 )
               })

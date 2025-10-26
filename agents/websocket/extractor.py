@@ -84,16 +84,30 @@ class AgentResultExtractor:
         fraud_score = result.get("fraud_score", 0)
         alerts = result.get("alerts", [])
         
+        # Determine risk level with more granular thresholds
+        if fraud_score >= 0.85:
+            risk_level = "severe"
+            color = "red"
+        elif fraud_score > 0.7:
+            risk_level = "high"
+            color = "red"
+        elif fraud_score > 0.4:
+            risk_level = "medium"
+            color = "orange"
+        else:
+            risk_level = "low"
+            color = "green"
+        
         return {
             "agent_name": "fraud_agent",
             "status": "completed",
             "result": result,
             "message": f"Fraud analysis complete: score {fraud_score:.2f}, {len(alerts)} alerts",
             "ui_data": {
-                "display_title": f"Fraud Risk: {fraud_score:.2f}",
-                "risk_level": "high" if fraud_score > 0.7 else "medium" if fraud_score > 0.4 else "low",
+                "display_title": f"Fraud Risk: {fraud_score:.2f} ({risk_level.title()})",
+                "risk_level": risk_level,
                 "icon": "shield",
-                "color": "red" if fraud_score > 0.7 else "orange" if fraud_score > 0.4 else "green",
+                "color": color,
                 "fraud_score": fraud_score,
                 "alerts": alerts,
                 "reason": result.get("reason")

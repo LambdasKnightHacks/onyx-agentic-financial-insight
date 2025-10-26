@@ -38,20 +38,28 @@ export function calculatePeriodDates(
     }
     
     case 'month': {
-      // Monthly period starting on the same day each month as start_on
-      const startDay = startDate.getDate()
-      const txDay = txDate.getDate()
+
       
-      if (txDay >= startDay) {
-        // Current month period
-        periodStart = new Date(txDate.getFullYear(), txDate.getMonth(), startDay)
+      // Calculate days since start date
+      const daysSinceStart = Math.floor((txDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (daysSinceStart <= 30) {
+        periodStart = new Date(startDate)
+        periodStart.setHours(0, 0, 0, 0)
+        periodEnd = new Date(txDate)
+        periodEnd.setHours(23, 59, 59, 999)
       } else {
-        // Previous month period
-        periodStart = new Date(txDate.getFullYear(), txDate.getMonth() - 1, startDay)
+        // show current rolling 30-day period
+        const periodNumber = Math.floor(daysSinceStart / 30)
+        const periodStartTime = startDate.getTime() + (periodNumber * 30 * 24 * 60 * 60 * 1000)
+        periodStart = new Date(periodStartTime)
+        periodStart.setHours(0, 0, 0, 0)
+        
+        periodEnd = new Date(periodStart)
+        periodEnd.setDate(periodEnd.getDate() + 30)
+        periodEnd.setHours(0, 0, 0, 0)
       }
       
-      periodEnd = new Date(periodStart)
-      periodEnd.setMonth(periodEnd.getMonth() + 1)
       break
     }
     

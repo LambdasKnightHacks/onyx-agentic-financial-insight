@@ -42,6 +42,8 @@ export interface Transaction {
 export interface Insight {
   id: string;
   title: string;
+  body?: string;
+  severity?: 'info' | 'warning' | 'critical';
   metricDelta: number;
   confidence: number;
   why: string[];

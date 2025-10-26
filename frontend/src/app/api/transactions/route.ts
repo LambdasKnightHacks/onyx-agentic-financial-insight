@@ -216,6 +216,20 @@ export async function POST(request: NextRequest) {
 
     console.log("Transaction created successfully:", transaction.id);
 
+    // Check budgets for exceeded alerts
+    // Trigger budget check in the background without blocking the response
+    const budgetCheckUrl = new URL('/api/alerts/check-budgets', request.url).toString();
+    fetch(budgetCheckUrl, {
+      method: 'POST',
+      headers: {
+        'Cookie': request.headers.get('Cookie') || '',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    }).catch(err => {
+      console.error('Error checking budgets:', err);
+    });
+
     // Transform and return the created transaction
     const transformedTransaction =
       transformSupabaseTransactionToTransaction(transaction);

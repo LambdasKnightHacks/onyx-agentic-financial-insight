@@ -29,6 +29,27 @@ export function useBudgets() {
         spendingMap.set(spending.budget_id, spending)
       })
       setSpendingData(spendingMap)
+      
+      // Check and create budget alerts if any budgets are exceeded
+      try {
+        const response = await fetch("/api/alerts/check-budgets", {
+          method: "POST",
+          credentials: 'include', // Ensure cookies are sent
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        if (response.ok) {
+          const result = await response.json()
+          console.log('[Budget Alerts] Check result:', result)
+          if (result.alerts_created > 0) {
+            console.log('[Budget Alerts] Created', result.alerts_created, 'new alerts')
+          }
+        }
+      } catch (error) {
+        console.error('[Budget Alerts] Error checking budgets:', error)
+        // Don't fail the budget fetch if alert check fails
+      }
     } catch (error) {
       console.error("Failed to fetch budgets:", error)
     } finally {

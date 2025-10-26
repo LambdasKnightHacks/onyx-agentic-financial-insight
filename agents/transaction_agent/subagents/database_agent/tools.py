@@ -91,7 +91,8 @@ def update_transaction_with_analysis(
 def create_insight_record(
     user_id: str,
     run_id: str,
-    final_insight: Dict[str, Any]
+    final_insight: Dict[str, Any],
+    plaid_transaction_id: str = None
 ) -> Dict[str, Any]:
     """
     Create insight record in the database.
@@ -100,6 +101,7 @@ def create_insight_record(
         user_id: User UUID
         run_id: Agent run UUID
         final_insight: Final insight data from synthesizer
+        plaid_transaction_id: Plaid transaction ID (optional, for creating alerts)
         
     Returns:
         Dict with status and insight_id
@@ -116,13 +118,14 @@ def create_insight_record(
             }
         
         # Prepare insight data
+        severity = final_insight.get("severity", "info")
         insight_data = {
             "user_id": user_id,
             "run_id": run_id,
             "title": final_insight.get("title", "Transaction Analysis"),
             "body": final_insight.get("body", ""),
             "data": final_insight.get("data", {}),
-            "severity": final_insight.get("severity", "info")
+            "severity": severity
         }
         
         print(f"[DB] Creating insight with data: {insight_data}")
@@ -134,9 +137,62 @@ def create_insight_record(
         
         if result.data:
             print(f"[DB] Insight created successfully with ID: {result.data[0]['id']}")
+            insight_id = result.data[0]["id"]
+            
+            # Check if severity is critical and create fraud alert
+            if severity == "critical" and plaid_transaction_id:
+                try:
+                    # Get transaction_id from plaid_transaction_id
+                    transaction_id = get_transaction_id_from_plaid_id(plaid_transaction_id)
+                    
+                    if transaction_id:
+                        # Extract relevant data from final_insight
+                        insight_data_dict = final_insight.get("data", {})
+                        key_metrics = insight_data_dict.get("key_metrics", {})
+                        risk_assessment = insight_data_dict.get("risk_assessment", {})
+                        
+                        # Get fraud score from key_metrics or risk_assessment
+                        fraud_score = key_metrics.get("fraud_score", risk_assessment.get("risk_score", 0.85))
+                        
+                        # Get reason from insight body or title
+                        reason = final_insight.get("body", final_insight.get("title", "Critical insight detected"))
+                        
+                        # Create fraud alert
+                        alert_data = {
+                            "user_id": user_id,
+                            "tx_id": transaction_id,
+                            "type": "fraud",
+                            "score": float(fraud_score),
+                            "reason": reason[:500] if len(reason) > 500 else reason,  # Limit reason length
+                            "severity": "critical",
+                            "status": "active"
+                        }
+                        
+                        print(f"[DB] Creating critical alert for transaction_id: {transaction_id}")
+                        alert_result = supabase.table(TABLES["alerts"])\
+                            .insert(alert_data)\
+                            .execute()
+                        
+                        if alert_result.data:
+                            print(f"[DB] Alert created successfully with ID: {alert_result.data[0]['id']}")
+                            return {
+                                "status": "success",
+                                "insight_id": insight_id,
+                                "alert_id": alert_result.data[0]["id"],
+                                "message": "Insight and critical alert created successfully"
+                            }
+                        else:
+                            print(f"[DB] Alert creation failed - no data returned")
+                    else:
+                        print(f"[DB] Could not find transaction_id for plaid_transaction_id: {plaid_transaction_id}")
+                except Exception as alert_error:
+                    print(f"[DB] Error creating critical alert: {str(alert_error)}")
+                    import traceback
+                    traceback.print_exc()
+            
             return {
                 "status": "success",
-                "insight_id": result.data[0]["id"],
+                "insight_id": insight_id,
                 "message": "Insight created successfully"
             }
         else:
@@ -179,13 +235,21 @@ def create_alerts_from_analysis(
         # Fraud alerts
         fraud_result = analysis_results.get("fraud_result", {})
         if fraud_result.get("status") == "success" and fraud_result.get("fraud_score", 0) > 0.5:
+            fraud_score = fraud_result.get("fraud_score", 0)
+            if fraud_score >= 0.85:
+                severity = "critical"
+            elif fraud_score > 0.7:
+                severity = "high"
+            else:
+                severity = "medium"
+                
             alert_data = {
                 "user_id": user_id,
                 "tx_id": transaction_id,
                 "type": "fraud",
-                "score": fraud_result.get("fraud_score"),
+                "score": fraud_score,
                 "reason": fraud_result.get("reason", "High fraud risk detected"),
-                "severity": "high" if fraud_result.get("fraud_score", 0) > 0.8 else "medium",
+                "severity": severity,
                 "status": "active"
             }
             
@@ -392,7 +456,7 @@ async def persist_analysis_results_async(
             print(f"[DB] Executing database operations...")
             
             # Always try to create insight and update run
-            insight_result = create_insight_record(user_id, run_id, final_insight)
+            insight_result = create_insight_record(user_id, run_id, final_insight, plaid_transaction_id)
             run_update = update_agent_run_completion(run_id, timings)
             
             # Only update transaction and create alerts if transaction exists in DB
@@ -426,6 +490,16 @@ async def persist_analysis_results_async(
         if isinstance(insight_result, dict) and insight_result.get("status") == "success":
             results["insight_created"] = True
             results["insight_id"] = insight_result.get("insight_id")
+            # If a critical alert was also created, add it to the alerts list
+            if insight_result.get("alert_id"):
+                if "alerts_created" not in results or results["alerts_created"] is None:
+                    results["alerts_created"] = []
+                results["alerts_created"].append({
+                    "type": "fraud",
+                    "id": insight_result.get("alert_id"),
+                    "severity": "critical"
+                })
+                print(f"[DB] Critical alert created with ID: {insight_result.get('alert_id')}")
             print(f"[DB] Insight created with ID: {results['insight_id']}")
         elif isinstance(insight_result, Exception):
             error_msg = f"Insight creation failed: {str(insight_result)}"

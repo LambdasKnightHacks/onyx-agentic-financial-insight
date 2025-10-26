@@ -94,7 +94,11 @@ def normalize_cashflow(result: Dict) -> Dict[str, Any]:
 
 
 def calculate_overall_risk(fraud: Dict, budget: Dict, cashflow: Dict) -> float:
-    """Calculate overall risk score from all agents."""
+    """Calculate overall risk score from all agents.
+    
+    Note: This is used for general risk assessment. For fraud-specific confidence,
+    use the fraud_score directly as it represents fraud detection certainty.
+    """
     risk_factors = []
     
     # Fraud risk (0.0 - 1.0)
@@ -131,7 +135,9 @@ def identify_primary_concerns(fraud: Dict, budget: Dict, cashflow: Dict) -> list
     # Fraud concerns
     if fraud and not fraud.get("error"):
         fraud_score = float(fraud.get("fraud_score", 0.0))
-        if fraud_score > 0.7:
+        if fraud_score >= 0.85:
+            concerns.append("Severe fraud risk detected")
+        elif fraud_score > 0.7:
             concerns.append("High fraud risk detected")
         elif fraud_score > 0.4:
             concerns.append("Moderate fraud risk")

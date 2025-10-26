@@ -21,6 +21,14 @@ import {
   AccordionTrigger,
 } from "@/src/components/ui/accordion";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
+import {
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -112,6 +120,7 @@ export default function InsightsPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [insightsPage, setInsightsPage] = useState(1);
+  const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
 
   // Pagination helper for insights
   const getPaginatedInsights = (items: Insight[], page: number) => {
@@ -502,73 +511,105 @@ export default function InsightsPage() {
       {/* Insights Grid */}
       <div>
         <div className="grid gap-6 md:grid-cols-2 mb-6">
-          {getPaginatedInsights(insights, insightsPage).map((insight) => (
-            <Card key={insight.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg leading-tight">
-                      {insight.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge
-                        variant={
-                          insight.metricDelta > 0 ? "destructive" : "default"
-                        }
-                        className="gap-1"
-                      >
-                        {insight.metricDelta > 0 ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
+          {getPaginatedInsights(insights, insightsPage).map((insight) => {
+            // Determine severity color
+            const severityColor = 
+              insight.severity === 'critical' ? 'border-l-red-500' :
+              insight.severity === 'warning' ? 'border-l-yellow-500' :
+              'border-l-blue-500'
+            
+            const severityIconColor = 
+              insight.severity === 'critical' ? 'text-red-500' :
+              insight.severity === 'warning' ? 'text-yellow-500' :
+              'text-blue-500'
+            
+            return (
+              <Card 
+                key={insight.id} 
+                className={`hover:shadow-lg transition-shadow border-l-4 ${severityColor} overflow-hidden`}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {insight.severity && (
+                          <Badge
+                            variant={
+                              insight.severity === 'critical' ? 'destructive' :
+                              insight.severity === 'warning' ? 'default' :
+                              'secondary'
+                            }
+                            className="gap-1 shrink-0"
+                          >
+                            <AlertTriangle className={`h-3 w-3 ${severityIconColor}`} />
+                            {insight.severity.toUpperCase()}
+                          </Badge>
                         )}
-                        {Math.abs(insight.metricDelta * 100).toFixed(0)}%
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        vs 3-month avg
-                      </span>
+
+                      </div>
+                      <CardTitle className="text-lg leading-tight break-words">
+                        {insight.title}
+                      </CardTitle>
+                      
+                      {insight.metricDelta !== 0 && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge
+                            variant={
+                              insight.metricDelta > 0 ? "destructive" : "default"
+                            }
+                            className="gap-1"
+                          >
+                            {insight.metricDelta > 0 ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            {Math.abs(insight.metricDelta * 100).toFixed(0)}% impact
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {insight.body && (
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2 break-words">
+                          {insight.body}
+                        </p>
+                      )}
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Confidence */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Confidence</span>
-                    <span className="font-medium">
-                      {(insight.confidence * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <Progress value={insight.confidence * 100} className="h-2" />
-                </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
 
-                {/* Why */}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Why you're seeing this:</p>
-                  <ul className="space-y-1">
-                    {insight.why.map((reason, idx) => (
-                      <li
-                        key={idx}
-                        className="text-sm text-muted-foreground flex items-start gap-2"
-                      >
-                        <span className="text-primary mt-0.5">•</span>
-                        <span>{reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  {insight.why && insight.why.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold flex items-center gap-1.5">
+                        <Lightbulb className="h-3.5 w-3.5 text-primary shrink-0" />
+                        Why:
+                      </p>
+                      <ul className="space-y-1">
+                        {insight.why.slice(0, 2).map((reason, idx) => (
+                          <li
+                            key={idx}
+                            className="text-sm text-muted-foreground break-words line-clamp-2"
+                          >
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                {/* CTA */}
-                {insight.cta && (
-                  <Button className="w-full gap-2" variant="default">
-                    {insight.cta.label}
+                  <Button 
+                    className="w-full gap-2" 
+                    variant={insight.severity === 'critical' ? 'destructive' : 'default'}
+                    onClick={() => setSelectedInsight(insight)}
+                  >
+                    See More Details
                     <ArrowRight className="h-4 w-4" />
                   </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         {/* Pagination */}
@@ -600,6 +641,89 @@ export default function InsightsPage() {
           </div>
         </Card>
       )}
+
+      {/* Insight Details Dialog */}
+      <Dialog open={!!selectedInsight} onOpenChange={(open) => !open && setSelectedInsight(null)}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden flex flex-col p-0 rounded-xl">
+          {selectedInsight && (
+            <>
+              {/* Header with gradient background */}
+              <div className={`
+                px-8 py-6 
+                ${selectedInsight.severity === 'critical' ? 'bg-gradient-to-br from-red-500 to-red-600' : ''}
+                ${selectedInsight.severity === 'warning' ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' : ''}
+                ${selectedInsight.severity === 'info' ? 'bg-gradient-to-br from-blue-500 to-blue-600' : ''}
+                text-white
+              `}>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle asChild>
+                      <h2 className="text-2xl font-bold leading-tight break-words">{selectedInsight.title}</h2>
+                    </DialogTitle>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-sm flex-wrap">
+                  {selectedInsight.metricDelta !== 0 && (
+                    <Badge variant="outline" className="border-white/30 text-white bg-white/10 backdrop-blur-sm">
+                      {selectedInsight.metricDelta > 0 ? '⚠️ Negative' : '✓ Positive'} impact
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto px-8 py-5 space-y-5 scrollbar-invisible">
+                {/* Full Body Text */}
+                {selectedInsight.body && (
+                  <div className="prose prose-sm max-w-none">
+                    <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+                      What's Happening
+                    </h3>
+                    <p className="text-sm leading-7 text-foreground whitespace-pre-wrap break-words">
+                      {selectedInsight.body}
+                    </p>
+                  </div>
+                )}
+
+                {/* Divider */}
+                {(selectedInsight.body && selectedInsight.why && selectedInsight.why.length > 0) && (
+                  <div className="border-t border-border/50" />
+                )}
+
+                {/* Detailed Why */}
+                {selectedInsight.why && selectedInsight.why.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-base font-semibold flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5 text-primary" />
+                      Key Points
+                    </h3>
+                    <ul className="space-y-3">
+                      {selectedInsight.why.map((reason, idx) => (
+                        <li key={idx} className="text-sm text-foreground flex items-start gap-3">
+                          <span className="text-primary mt-1.5 flex-shrink-0">•</span>
+                          <span className="flex-1 break-words leading-relaxed">{reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t border-border/50 px-8 py-5 flex gap-3 bg-muted/20">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedInsight(null)}
+                  className="flex-1 min-w-0"
+                >
+                  Close
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -104,6 +104,8 @@ export interface SupabaseInsight {
 export interface Insight {
   id: string
   title: string
+  body?: string
+  severity?: 'info' | 'warning' | 'critical'
   metricDelta: number
   confidence: number
   why: string[]
@@ -188,13 +190,154 @@ export function transformSupabaseTransactionToTransaction(supabaseTransaction: S
 
 export function transformSupabaseInsightToInsight(supabaseInsight: SupabaseInsight): Insight {
   const data = supabaseInsight.data as any
+  const severity = (supabaseInsight.severity as 'info' | 'warning' | 'critical') || 'info'
+  
+  // Extract information from the nested data structure
+  const riskAssessment = data?.risk_assessment || {}
+  const keyMetrics = data?.key_metrics || {}
+  const recommendations = data?.recommendations || []
+  const alerts = data?.alerts || []
+  const insights = data?.insights || []
+  
+  // Calculate metricDelta from key metrics if available
+  const fraudScore = keyMetrics?.fraud_score || 0
+  const cashflowRunway = keyMetrics?.cashflow_runway || 0
+  const budgetStatus = keyMetrics?.budget_status || 'unknown'
+  
+  // Determine confidence based on fraud score for fraud-related alerts
+  let confidence: number
+  
+  if (fraudScore > 0) {
+
+    // Higher fraud score = higher confidence in the alert
+    confidence = fraudScore
+  } else {
+    // For non-fraud alerts, use risk score
+    confidence = riskAssessment?.risk_score || (severity === 'critical' ? 0.9 : severity === 'warning' ? 0.7 : 0.5)
+  }
+  
+  // Build "why" array from available data
+  const whyArray: string[] = []
+  
+  // Helper function to convert technical terms to user-friendly language
+  const makeUserFriendly = (text: string): string => {
+    return text
+      .replace(/velocity_issue/gi, 'unusual spending pattern detected')
+      .replace(/fraud_indicator/gi, 'potentially suspicious activity')
+      .replace(/z_score/gi, 'spending anomaly')
+      .replace(/geo_anomaly/gi, 'location mismatch')
+      .replace(/budget_exceeded/gi, 'budget limit exceeded')
+      .replace(/cashflow_crisis/gi, 'cash flow concerns')
+  }
+  
+  // Check if text is a technical error that shouldn't be shown to users
+  const isTechnicalError = (text: string): boolean => {
+    const technicalPatterns = [
+      'event loop',
+      'event loop closed',
+      'connection error',
+      'timeout',
+      'json decode',
+      'attribute error',
+      'key error',
+      'parse error',
+      'invalid response'
+    ]
+    const textLower = text.toLowerCase()
+    return technicalPatterns.some(pattern => textLower.includes(pattern))
+  }
+  
+  // Add alerts to why array (filter and clean)
+  if (Array.isArray(alerts) && alerts.length > 0) {
+    alerts.forEach(alert => {
+      const cleaned = makeUserFriendly(String(alert))
+      // Filter out technical errors
+      if (!isTechnicalError(cleaned) && cleaned.length > 20 && cleaned !== alert) {
+        whyArray.push(cleaned)
+      }
+    })
+  }
+  
+  // Add insights to why array
+  if (Array.isArray(insights) && insights.length > 0) {
+    insights.forEach(insight => {
+      const cleaned = makeUserFriendly(String(insight))
+      // Filter out technical errors
+      if (!isTechnicalError(cleaned) && cleaned && cleaned.trim().length > 15) {
+        whyArray.push(cleaned)
+      }
+    })
+  }
+  
+  // Add recommendations as explanations
+  if (recommendations.length > 0) {
+    recommendations.forEach((rec: any) => {
+      if (rec.reasoning && rec.reasoning.trim().length > 15 && !isTechnicalError(rec.reasoning)) {
+        whyArray.push(rec.reasoning)
+      }
+    })
+  }
+  
+  // extract from body if no specific "why" data
+  if (whyArray.length === 0 && supabaseInsight.body) {
+    // Try to extract meaningful sentences from body
+    const sentences = supabaseInsight.body.split(/[.!?]+/)
+      .filter(s => s.trim().length > 20 && s.trim().length < 120)
+      .slice(0, 2) // Limit to 2 concise sentences
+    whyArray.push(...sentences)
+  }
+  
+  // Limit why array to 3 items max for concise display
+  if (whyArray.length > 3) {
+    whyArray.splice(3)
+  }
+  
+  // Calculate metricDelta based on available metrics
+  let metricDelta = data?.metricDelta || 0
+  
+  // If no metricDelta but we have fraud score, use that
+  if (metricDelta === 0 && fraudScore > 0) {
+    metricDelta = fraudScore
+  }
+  
+  // If cashflow runway is a concern, use that
+  if (metricDelta === 0 && cashflowRunway > 0 && cashflowRunway < 30) {
+    metricDelta = 1 - (cashflowRunway / 30) // Inverse relationship
+  }
+  
+  // Build CTA from recommendations
+  let cta = data?.cta
+  if (!cta && recommendations.length > 0) {
+    const firstRec = recommendations[0]
+    // Create a shorter, more friendly label
+    let label = firstRec.action || 'Take action'
+    // Truncate to reasonable length for button
+    if (label.length > 50) {
+      label = label.substring(0, 47) + '...'
+    }
+    
+    cta = {
+      label,
+      action: 'dashboard',
+      params: {
+        category: firstRec.category,
+        priority: firstRec.priority
+      }
+    }
+  }
+  
+  // Truncate body if too long
+  let bodyText = supabaseInsight.body
+
   return {
     id: supabaseInsight.id,
     title: supabaseInsight.title,
-    metricDelta: data?.metricDelta || 0,
-    confidence: data?.confidence || 0,
-    why: data?.why || [],
-    cta: data?.cta
+    body: bodyText || undefined,
+    severity,
+    metricDelta,
+    confidence,
+    why: whyArray.length > 0 ? whyArray : ['Analysis completed'],
+    cta
   }
 }
 
