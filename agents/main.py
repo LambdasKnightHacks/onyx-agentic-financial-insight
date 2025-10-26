@@ -16,7 +16,7 @@ from websocket.manager import websocket_manager
 from websocket.publisher import websocket_publisher
 
 from transaction_agent.agent import root_agent
-from chat_agent.agent import root_agent as chat_agent
+from chat_agent.agent import create_user_agent
 
 app = FastAPI()
 
@@ -122,10 +122,9 @@ async def analyze_transaction(request: TransactionRequest):
             if event.is_final_response():
                 break
 
-        # Extract results from final session state
-        final_session = await session_service.get_session(app_name, request.user_id, session_id)
-        run_id = final_session.state.get("run_id", session_id)
-        insights_id = final_session.state.get("insights_id")
+        # Extract results from the session object we already have
+        run_id = session.state.get("run_id", session_id)
+        insights_id = session.state.get("insights_id")
 
         return TransactionResponse(
             status="success",
@@ -177,28 +176,58 @@ async def chat_with_agent(request: ChatRequest):
         )
         await session_service.append_event(session, init_event)
         
+        # Create user-specific agent with security context
+        # This ensures the agent can ONLY access this user's data
+        user_agent = create_user_agent(request.user_id)
+        
         # Create runner and execute chat agent
+        # The runner will automatically load conversation history from session_id
         runner = Runner(
-            agent=chat_agent,
+            agent=user_agent,
             app_name=app_name,
             session_service=session_service
         )
         
-        # Run the chat agent
+        # Run the chat agent with session context
+        # ADK automatically loads previous messages from this session_id
         events = []
+        final_event = None
         for event in runner.run(
             user_id=request.user_id,
-            session_id=session_id,
+            session_id=session_id,  # This enables conversation memory
             new_message=Content(parts=[Part(text=request.message)])
         ):
             events.append(event)
             if event.is_final_response():
+                final_event = event
                 break
         
-        # Extract results from final session state
-        final_session = await session_service.get_session(app_name, request.user_id, session_id)
-        agent_response = final_session.state.get("agent_response", "I'm sorry, I couldn't process your request.")
-        charts = final_session.state.get("charts", [])
+        # Extract response and charts from ALL events
+        agent_response = "I'm sorry, I couldn't process your request."
+        charts = []
+        
+        # Parse all events to extract text and charts
+        for event in events:
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    # Extract text response (prioritize final event's text)
+                    if hasattr(part, 'text') and part.text:
+                        if event.is_final_response() or not agent_response or agent_response == "I'm sorry, I couldn't process your request.":
+                            agent_response = part.text
+                    
+                    # Extract function call results (charts from visualization tools)
+                    if hasattr(part, 'function_response') and part.function_response:
+                        try:
+                            func_result = part.function_response
+                            if hasattr(func_result, 'response') and func_result.response:
+                                result_data = func_result.response
+                                # Check if this is a chart result
+                                if isinstance(result_data, dict) and result_data.get('chart_type'):
+                                    charts.append(result_data)
+                        except Exception as e:
+                            print(f"[CHART] Error extracting chart: {e}")
+        
+        print(f"[CHAT] Extracted {len(charts)} chart(s) from tool calls")
         
         return ChatResponse(
             status="success",

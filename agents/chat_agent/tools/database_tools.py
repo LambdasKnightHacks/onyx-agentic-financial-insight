@@ -49,16 +49,16 @@ def _format_currency(amount: float) -> str:
 
 async def get_recent_alerts(
     user_id: str, 
-    limit: int = 10, 
-    alert_type: Optional[str] = None,
-    resolved: Optional[bool] = None
+    limit: Optional[int], 
+    alert_type: Optional[str],
+    resolved: Optional[bool]
 ) -> dict:
     """
     Fetch recent alerts for a user.
     
     Args:
         user_id: User ID to fetch alerts for
-        limit: Maximum number of alerts to return (default 10)
+        limit: Maximum number of alerts to return (defaults to 10 if not provided)
         alert_type: Optional filter by alert type (fraud, budget, cashflow)
         resolved: Optional filter by resolved status (True/False/None for all)
     
@@ -66,6 +66,10 @@ async def get_recent_alerts(
         dict with success, data, and summary fields
     """
     try:
+        # Handle defaults inside function
+        if limit is None:
+            limit = 10
+        
         supabase = get_supabase_client()
         
         # Build query
@@ -126,18 +130,22 @@ async def get_recent_alerts(
         }
 
 
-async def get_recent_insights(user_id: str, limit: int = 10) -> dict:
+async def get_recent_insights(user_id: str, limit: Optional[int]) -> dict:
     """
     Fetch recent AI-generated insights for a user.
     
     Args:
         user_id: User ID to fetch insights for
-        limit: Maximum number of insights to return (default 10)
+        limit: Maximum number of insights to return (defaults to 10 if not provided)
     
     Returns:
         dict with success, data, and summary fields
     """
     try:
+        # Handle defaults inside function
+        if limit is None:
+            limit = 10
+        
         supabase = get_supabase_client()
         
         response = supabase.table("insights").select(
@@ -179,23 +187,29 @@ async def get_recent_insights(user_id: str, limit: int = 10) -> dict:
 
 async def get_recent_transactions(
     user_id: str, 
-    days: int = 30, 
-    limit: int = 50,
-    category: Optional[str] = None
+    days: Optional[int], 
+    limit: Optional[int],
+    category: Optional[str]
 ) -> dict:
     """
     Fetch recent transactions for a user.
     
     Args:
         user_id: User ID to fetch transactions for
-        days: Number of days to look back (default 30)
-        limit: Maximum number of transactions to return (default 50)
+        days: Number of days to look back (defaults to 30 if not provided)
+        limit: Maximum number of transactions to return (defaults to 50 if not provided)
         category: Optional filter by category
     
     Returns:
         dict with success, data, and summary fields
     """
     try:
+        # Handle defaults inside function
+        if days is None:
+            days = 30
+        if limit is None:
+            limit = 50
+        
         supabase = get_supabase_client()
         
         # Calculate date threshold
@@ -321,18 +335,22 @@ async def get_account_balances(user_id: str) -> dict:
 
 # AGGREGATION TOOLS
 
-async def get_spending_by_category(user_id: str, days: int = 30) -> dict:
+async def get_spending_by_category(user_id: str, days: Optional[int]) -> dict:
     """
     Aggregate spending by category for a user.
     
     Args:
         user_id: User ID to analyze
-        days: Number of days to look back (default 30)
+        days: Number of days to look back (defaults to 30 if not provided)
     
     Returns:
         dict with success, data (category aggregations), and summary
     """
     try:
+        # Handle defaults inside function
+        if days is None:
+            days = 30
+        
         supabase = get_supabase_client()
         
         # Calculate date threshold
@@ -575,7 +593,7 @@ async def update_budget(
     user_id: str, 
     category: str, 
     new_cap_amount: float,
-    subcategory: Optional[str] = None
+    subcategory: Optional[str]
 ) -> dict:
     """
     Update an existing budget cap amount.
@@ -587,7 +605,7 @@ async def update_budget(
         category: Budget category (must be one of: income, living, food, transportation, 
                  shopping, entertainment, travel, healthcare, education, financial)
         new_cap_amount: New budget cap amount
-        subcategory: Optional subcategory for more specific budget
+        subcategory: Optional subcategory for more specific budget (can be omitted)
     
     Returns:
         dict with success status and message
@@ -677,9 +695,9 @@ async def create_budget(
     user_id: str,
     category: str,
     cap_amount: float,
-    period: str = "month",
-    subcategory: Optional[str] = None,
-    label: Optional[str] = None
+    period: Optional[str],
+    subcategory: Optional[str],
+    label: Optional[str]
 ) -> dict:
     """
     Create a new budget for a category.
@@ -691,7 +709,7 @@ async def create_budget(
         category: Budget category (must be one of: income, living, food, transportation, 
                  shopping, entertainment, travel, healthcare, education, financial)
         cap_amount: Budget cap amount
-        period: Budget period ('month' or 'week', default 'month')
+        period: Budget period ('month' or 'week', defaults to 'month' if not provided)
         subcategory: Optional subcategory (must match category's valid subcategories)
         label: Optional custom label
     
@@ -699,6 +717,10 @@ async def create_budget(
         dict with success status and message
     """
     try:
+        # Handle default values inside function
+        if period is None:
+            period = "month"
+        
         if cap_amount <= 0:
             return {
                 "success": False,

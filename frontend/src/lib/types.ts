@@ -100,3 +100,57 @@ export interface AuditLog {
   details: string;
   userId?: string;
 }
+
+// Chat Message Types
+export type MessageRole = "user" | "assistant" | "system";
+export type MessageStatus = "sending" | "sent" | "error";
+
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  charts?: ChartData[];
+  timestamp: string;
+  status?: MessageStatus;
+}
+
+export interface ChartData {
+  chart_type: string;
+  data: any[];
+  config: {
+    title?: string;
+    xAxis?: any;
+    yAxis?: any;
+    legend?: any;
+    tooltip?: any;
+    [key: string]: any;
+  };
+  metadata: {
+    description?: string;
+    generated_at?: string;
+    [key: string]: any;
+  };
+}
+
+export interface ChatSession {
+  session_id: string;
+  user_id: string;
+  messages: ChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+// API Request/Response
+export interface ChatRequest {
+  user_id: string;
+  message: string;
+  session_id?: string;
+}
+
+export interface ChatResponse {
+  status: string;
+  message: string;
+  charts: ChartData[];
+  session_id: string;
+  timestamp: string;
+}
