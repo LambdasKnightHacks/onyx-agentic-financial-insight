@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/src/lib/supabase"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
+import { supabaseAdmin } from "@/lib/supabase"
+import { getUserIdFromRequest } from "@/lib/auth-utils"
 
+// fetch all alerts for a user
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

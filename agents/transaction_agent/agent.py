@@ -8,6 +8,7 @@ from .subagents import (
     fraud_agent,
     budget_agent,
     cashflow_agent,
+    consensus_agent,
     reducer_agent,
     synthesizer_agent,
     database_agent
@@ -25,12 +26,13 @@ parallel_analysis_agent = ParallelAgent(
     ],
 )
 
-# Root Sequential Agent: orchestrates the entire pipeline (optimized - removed consensus agent)
+# Root Sequential Agent: orchestrates the entire pipeline with A2A consensus
 root_agent = SequentialAgent(
     name="transaction_agent",
     sub_agents=[
         init_agent,
         parallel_analysis_agent,
+        consensus_agent,
         reducer_agent,
         synthesizer_agent,
         database_agent

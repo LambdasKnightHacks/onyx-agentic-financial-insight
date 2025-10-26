@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/src/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
-import type { Budget } from "@/src/lib/types"
+import type { Budget } from "@/lib/types"
 import { useBudgets } from "./hooks/useBudgets"
 import { BudgetCard } from "./components/BudgetCard"
 import { BudgetDialog } from "./components/BudgetDialog"

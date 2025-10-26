@@ -1,15 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card } from "@/src/components/ui/card"
-import { Label } from "@/src/components/ui/label"
-import { Switch } from "@/src/components/ui/switch"
-import { Button } from "@/src/components/ui/button"
-import { Badge } from "@/src/components/ui/badge"
-import { Bell, Shield, Database, Trash2 } from "lucide-react"
-import { AddAccountDialog } from "@/src/components/add-account"
-import { useToast } from "@/src/components/hooks/use-toast"
-import type { Account } from "@/src/lib/types"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Database, Trash2 } from "lucide-react"
+import { AddAccountDialog } from "@/components/add-account"
+import { useToast } from "@/components/hooks/use-toast"
+import type { Account } from "@/lib/types"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +17,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/src/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog"
 
 export default function SettingsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -168,70 +166,9 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <Card className="p-6">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Bell className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold">Notifications</h2>
-              <p className="text-sm text-muted-foreground mt-1">Choose how you want to be notified</p>
-            </div>
-          </div>
+        
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="email-alerts">Email Alerts</Label>
-                <p className="text-sm text-muted-foreground">Receive security alerts via email</p>
-              </div>
-              <Switch id="email-alerts" defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="insights-digest">Weekly Insights Digest</Label>
-                <p className="text-sm text-muted-foreground">Get a summary of your financial insights</p>
-              </div>
-              <Switch id="insights-digest" defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="transaction-alerts">Large Transaction Alerts</Label>
-                <p className="text-sm text-muted-foreground">Notify me of transactions over $500</p>
-              </div>
-              <Switch id="transaction-alerts" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold">Privacy & Security</h2>
-              <p className="text-sm text-muted-foreground mt-1">Control your data and security preferences</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="mask-numbers">Mask Account Numbers</Label>
-                <p className="text-sm text-muted-foreground">Hide sensitive account information by default</p>
-              </div>
-              <Switch id="mask-numbers" defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="two-factor">Two-Factor Authentication</Label>
-                <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-              </div>
-              <Switch id="two-factor" />
-            </div>
-          </div>
-        </Card>
+        
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

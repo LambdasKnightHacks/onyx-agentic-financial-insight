@@ -29,6 +29,24 @@ def format_results_for_llm(merged_results: Dict[str, Any]) -> str:
     """Format merged results in a readable way for the LLM."""
     formatted = []
     
+    # Technical error patterns to filter out
+    technical_error_patterns = [
+        "event loop is closed",
+        "event loop closed",
+        "connection error",
+        "timeout",
+        "json decode error",
+        "attribute error",
+        "key error"
+    ]
+    
+    def is_technical_error(text: str) -> bool:
+        """Check if error message is a technical error that shouldn't be shown to users."""
+        if not text:
+            return False
+        text_lower = text.lower()
+        return any(pattern in text_lower for pattern in technical_error_patterns)
+    
     # Transaction analysis section
     analysis = merged_results.get("transaction_analysis", {})
     
@@ -37,16 +55,24 @@ def format_results_for_llm(merged_results: Dict[str, Any]) -> str:
     if cat.get("status") == "success":
         formatted.append(f"Category: {cat['category']}/{cat['subcategory']} (confidence: {cat['confidence']:.2f})")
     else:
-        formatted.append(f"Category: Failed - {cat.get('reason', 'Unknown error')}")
+        reason = cat.get('reason', 'Unknown error')
+        # Filter out technical errors
+        if not is_technical_error(reason):
+            formatted.append(f"Category: Analysis unavailable")
     
     # Fraud detection
     fraud = analysis.get("fraud_detection", {})
     if fraud.get("status") == "success":
         formatted.append(f"Fraud Risk: {fraud['fraud_score']:.2f} (alerts: {len(fraud['alerts'])})")
         if fraud['alerts']:
-            formatted.append(f"  - Alerts: {', '.join(fraud['alerts'])}")
+            filtered_alerts = [a for a in fraud['alerts'] if not is_technical_error(a)]
+            if filtered_alerts:
+                formatted.append(f"  - Alerts: {', '.join(filtered_alerts)}")
     else:
-        formatted.append(f"Fraud Detection: Failed - {fraud.get('reason', 'Unknown error')}")
+        reason = fraud.get('reason', 'Unknown error')
+        # Filter out technical errors
+        if not is_technical_error(reason):
+            formatted.append(f"Fraud Detection: Analysis unavailable")
     
     # Budget analysis
     budget = analysis.get("budget_analysis", {})
@@ -57,7 +83,10 @@ def format_results_for_llm(merged_results: Dict[str, Any]) -> str:
         if budget['tips']:
             formatted.append(f"  - Tips: {len(budget['tips'])} recommendations provided")
     else:
-        formatted.append(f"Budget Analysis: Failed - {budget.get('reason', 'Unknown error')}")
+        reason = budget.get('reason', 'Unknown error')
+        # Filter out technical errors
+        if not is_technical_error(reason):
+            formatted.append(f"Budget Analysis: Unavailable")
     
     # Cashflow forecast
     cashflow = analysis.get("cashflow_forecast", {})
@@ -67,7 +96,10 @@ def format_results_for_llm(merged_results: Dict[str, Any]) -> str:
         if cashflow['recommendations']:
             formatted.append(f"  - Recommendations: {len(cashflow['recommendations'])} provided")
     else:
-        formatted.append(f"Cashflow Forecast: Failed - {cashflow.get('reason', 'Unknown error')}")
+        reason = cashflow.get('reason', 'Unknown error')
+        # Filter out technical errors
+        if not is_technical_error(reason):
+            formatted.append(f"Cashflow Forecast: Unavailable")
     
     # Summary section
     summary = merged_results.get("summary", {})

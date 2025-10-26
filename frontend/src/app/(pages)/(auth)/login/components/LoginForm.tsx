@@ -1,19 +1,19 @@
 // components/LoginForm.tsx
 import Link from "next/link";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/src/components/ui/card";
-import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { login } from "@/src/lib/auth-actions";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { login } from "@/lib/auth-actions";
 import SignInWithGoogleButton from "./SignInWithGoogleButton";
-import { GL } from "@/src/components/gl";
-import { OnyxIcon } from "@/src/components/logo";
+import { GL } from "@/components/gl";
+import { OnyxIcon } from "@/components/logo";
 
 export default function LoginForm() {
   return (

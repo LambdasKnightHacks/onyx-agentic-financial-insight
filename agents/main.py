@@ -10,12 +10,22 @@ from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 from google.adk.runners import Runner
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+# ✅ CRITICAL: Load environment variables from .env file
+load_dotenv()
 
 # WebSocket imports (organized)
 from websocket.manager import websocket_manager
 from websocket.publisher import websocket_publisher
 
 from transaction_agent.agent import root_agent
+from chat_agent.agent import create_user_agent
+from financial_summary import generate_financial_summary, store_summary, get_latest_summary, should_regenerate_summary
+
+# Decision Agent imports
+from decision_agent.runner import initialize_runner, get_runner
+from decision_agent.tools.database import create_decision_analysis
 
 app = FastAPI()
 
@@ -45,6 +55,45 @@ class TransactionResponse(BaseModel):
     insights_id: str | None = None
     message: str
 
+class ChatRequest(BaseModel):
+    user_id: str
+    message: str
+    session_id: str | None = None
+
+class ChatResponse(BaseModel):
+    status: str
+    message: str
+    charts: list[Dict[str, Any]] = []
+    session_id: str
+    timestamp: str
+
+class FinancialSummaryRequest(BaseModel):
+    user_id: str
+    period_days: int = 30
+    force_refresh: bool = False
+
+class FinancialSummaryResponse(BaseModel):
+    status: str
+    summary_id: str | None = None
+    summary: Dict[str, Any] | None = None
+    message: str
+    generated_at: str
+
+class DecisionAnalysisRequest(BaseModel):
+    user_id: str
+    session_id: str | None = None
+    decision_type: str
+    decision_inputs: Dict[str, Any]
+    preferences: Dict[str, Any] = {}
+    constraints: Dict[str, Any] = {}
+
+class DecisionAnalysisResponse(BaseModel):
+    status: str
+    session_id: str
+    analysis_id: str
+    message: str
+    websocket_url: str
+
 @app.post("/api/transaction/analyze", response_model=TransactionResponse)
 async def analyze_transaction(request: TransactionRequest):
     f"""
@@ -70,27 +119,26 @@ async def analyze_transaction(request: TransactionRequest):
         session_id = str(uuid.uuid4())
         app_name = "transaction_analyzer"
 
-        # Create session
-        session = session_service.create_session(
+        # Create session (using await for async consistency)
+        session = await session_service.create_session(
             app_name=app_name,
             user_id=request.user_id,
             session_id=session_id,
         )
 
-        # Set incoming transaction in session state
-        session_service.append_event(
-            session,
-            session_service.create_event(
-                invocation_id=f"init_{session_id}",
-                author="api",
-                content=Content(parts=[Part(text="Transaction analysis started")]),
-                actions={"state_delta": {
-                    "incoming_transaction": request.transaction,
-                    "user_id": request.user_id,
-                    "session_id": session_id
-                }}
-            )
+        # Set incoming transaction in session state using Event/EventActions
+        from google.adk.events import Event, EventActions
+        init_event = Event(
+            author="api",
+            invocation_id=f"init_{session_id}",
+            content=Content(parts=[Part(text="Transaction analysis started")]),
+            actions=EventActions(state_delta={
+                "incoming_transaction": request.transaction,
+                "user_id": request.user_id,
+                "session_id": session_id
+            })
         )
+        await session_service.append_event(session, init_event)
 
         # Create runner and execute pipeline
         runner = Runner(
@@ -110,10 +158,9 @@ async def analyze_transaction(request: TransactionRequest):
             if event.is_final_response():
                 break
 
-        # Extract results from final session state
-        final_session = session_service.get_session(app_name, request.user_id, session_id)
-        run_id = final_session.state.get("run_id", session_id)
-        insights_id = final_session.state.get("insights_id")
+        # Extract results from the session object we already have
+        run_id = session.state.get("run_id", session_id)
+        insights_id = session.state.get("insights_id")
 
         return TransactionResponse(
             status="success",
@@ -127,10 +174,213 @@ async def analyze_transaction(request: TransactionRequest):
             message=f"Analysis failed: {str(e)}"
         )
 
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_with_agent(request: ChatRequest):
+    """
+    Chat with the financial AI agent
+    
+    Expected request format:
+    {
+        "user_id": "uuid",
+        "message": "Show my cashflow runway for the next 60 days",
+        "session_id": "optional_session_id"
+    }
+    """
+    try:
+        # Generate session ID if not provided
+        session_id = request.session_id or str(uuid.uuid4())
+        app_name = "financial_chat"
+        
+        # Create session (using await for async consistency)
+        session = await session_service.create_session(
+            app_name=app_name,
+            user_id=request.user_id,
+            session_id=session_id,
+        )
+        
+        # Set chat message in session state using Event/EventActions
+        from google.adk.events import Event, EventActions
+        init_event = Event(
+            author="user",
+            invocation_id=f"chat_{session_id}",
+            content=Content(parts=[Part(text=request.message)]),
+            actions=EventActions(state_delta={
+                "user_message": request.message,
+                "user_id": request.user_id,
+                "session_id": session_id
+            })
+        )
+        await session_service.append_event(session, init_event)
+        
+        # Create user-specific agent with security context
+        # This ensures the agent can ONLY access this user's data
+        user_agent = create_user_agent(request.user_id)
+        
+        # Create runner and execute chat agent
+        # The runner will automatically load conversation history from session_id
+        runner = Runner(
+            agent=user_agent,
+            app_name=app_name,
+            session_service=session_service
+        )
+        
+        # Run the chat agent with session context
+        # ADK automatically loads previous messages from this session_id
+        events = []
+        final_event = None
+        for event in runner.run(
+            user_id=request.user_id,
+            session_id=session_id,  # This enables conversation memory
+            new_message=Content(parts=[Part(text=request.message)])
+        ):
+            events.append(event)
+            if event.is_final_response():
+                final_event = event
+                break
+        
+        # Extract response and charts from ALL events
+        agent_response = "I'm sorry, I couldn't process your request."
+        charts = []
+        
+        # Parse all events to extract text and charts
+        for event in events:
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    # Extract text response (prioritize final event's text)
+                    if hasattr(part, 'text') and part.text:
+                        if event.is_final_response() or not agent_response or agent_response == "I'm sorry, I couldn't process your request.":
+                            agent_response = part.text
+                    
+                    # Extract function call results (charts from visualization tools)
+                    if hasattr(part, 'function_response') and part.function_response:
+                        try:
+                            func_result = part.function_response
+                            if hasattr(func_result, 'response') and func_result.response:
+                                result_data = func_result.response
+                                # Check if this is a chart result
+                                if isinstance(result_data, dict) and result_data.get('chart_type'):
+                                    charts.append(result_data)
+                        except Exception as e:
+                            print(f"[CHART] Error extracting chart: {e}")
+        
+        print(f"[CHAT] Extracted {len(charts)} chart(s) from tool calls")
+        
+        return ChatResponse(
+            status="success",
+            message=agent_response,
+            charts=charts,
+            session_id=session_id,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        return ChatResponse(
+            status="error",
+            message=f"Chat failed: {str(e)}",
+            charts=[],
+            session_id=request.session_id or str(uuid.uuid4()),
+            timestamp=datetime.now().isoformat()
+        )
+
+@app.post("/api/financial-summary/generate", response_model=FinancialSummaryResponse)
+async def generate_and_store_financial_summary(request: FinancialSummaryRequest):
+    """
+    Generate and store a comprehensive financial summary.
+    
+    Called on user login to generate a complete financial overview.
+    Returns cached summary if available and fresh (< 6 hours old).
+    
+    Expected request format:
+    {
+        "user_id": "uuid",
+        "period_days": 30  # Optional, defaults to 30
+    }
+    """
+    try:
+        # Check if we should regenerate (summary doesn't exist or is stale)
+        should_regenerate = await should_regenerate_summary(request.user_id, max_age_hours=6)
+        
+        # Force refresh if requested
+        if request.force_refresh:
+            should_regenerate = True
+        
+        if not should_regenerate:
+            # Return cached summary
+            cached_summary = await get_latest_summary(request.user_id)
+            if cached_summary:
+                return FinancialSummaryResponse(
+                    status="success",
+                    summary_id=cached_summary["id"],
+                    summary=cached_summary.get("summary_data"),
+                    message="Returning cached summary",
+                    generated_at=cached_summary.get("created_at", datetime.now().isoformat())
+                )
+        
+        # Generate new summary
+        result = await generate_financial_summary(request.user_id, request.period_days)
+        
+        if not result.get("success"):
+            return FinancialSummaryResponse(
+                status="error",
+                summary_id=None,
+                summary=None,
+                message=f"Failed to generate summary: {result.get('error')}",
+                generated_at=datetime.now().isoformat()
+            )
+        
+        summary_data = result.get("summary")
+        
+        # Store in database
+        store_result = await store_summary(request.user_id, summary_data)
+        
+        if store_result.get("success"):
+            return FinancialSummaryResponse(
+                status="success",
+                summary_id=store_result.get("summary_id"),
+                summary=summary_data,
+                message="Summary generated and stored successfully",
+                generated_at=summary_data.get("period", {}).get("generated_at", datetime.now().isoformat())
+            )
+        elif store_result.get("already_exists"):
+            # Summary already exists for this period, return it
+            cached_summary = await get_latest_summary(request.user_id)
+            return FinancialSummaryResponse(
+                status="success",
+                summary_id=cached_summary["id"] if cached_summary else None,
+                summary=summary_data,
+                message="Summary generated (already existed in database)",
+                generated_at=summary_data.get("period", {}).get("generated_at", datetime.now().isoformat())
+            )
+        else:
+            return FinancialSummaryResponse(
+                status="partial",
+                summary_id=None,
+                summary=summary_data,
+                message=f"Generated but storage failed: {store_result.get('error')}",
+                generated_at=summary_data.get("period", {}).get("generated_at", datetime.now().isoformat())
+            )
+            
+    except Exception as e:
+        return FinancialSummaryResponse(
+            status="error",
+            summary_id=None,
+            summary=None,
+            message=f"Summary generation failed: {str(e)}",
+            generated_at=datetime.now().isoformat()
+        )
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "transaction-analyzer"}
+    return {
+        "status": "healthy", 
+        "services": {
+            "transaction-analyzer": "active",
+            "financial-chat": "active",
+            "financial-summary": "active"
+        },
+        "version": "1.0.0"
+    }
 
 @app.websocket("/ws/transaction/analyze")
 async def websocket_analyze_transaction(websocket: WebSocket):
@@ -193,6 +443,202 @@ async def websocket_analyze_transaction(websocket: WebSocket):
             await websocket_publisher.publish_error(session_id, str(e))
         if user_id:
             websocket_manager.disconnect(websocket, user_id)
+
+@app.websocket("/ws/chat/{user_id}")
+async def websocket_chat_endpoint(websocket: WebSocket, user_id: str):
+    """WebSocket endpoint for real-time chat with financial AI agent"""
+    print(f"[WS CHAT] WebSocket chat connection attempt for user: {user_id}")
+    session_id = None
+    
+    try:
+        await websocket.accept()
+        print(f"[WS CHAT] WebSocket accepted for user: {user_id}")
+        
+        # Connect to WebSocket manager
+        await websocket_manager.connect(websocket, user_id)
+        
+        # Send welcome message
+        await websocket.send_json({
+            "type": "chat_connected",
+            "timestamp": datetime.now().isoformat(),
+            "data": {
+                "user_id": user_id,
+                "message": "Connected to FinFlow AI. How can I help you with your finances today?"
+            }
+        })
+        
+        # Listen for chat messages
+        while True:
+            try:
+                # Receive chat message from client
+                data = await websocket.receive_json()
+                message = data.get("message", "").strip()
+                
+                if not message:
+                    await websocket.send_json({
+                        "type": "error",
+                        "timestamp": datetime.now().isoformat(),
+                        "data": {"message": "Please provide a message"}
+                    })
+                    continue
+                
+                print(f"[WS CHAT] Received message from {user_id}: {message}")
+                
+                # Generate session ID for this chat
+                session_id = str(uuid.uuid4())
+                
+                # Send thinking indicator
+                await websocket.send_json({
+                    "type": "agent_thinking",
+                    "timestamp": datetime.now().isoformat(),
+                    "data": {
+                        "message": "FinFlow AI is thinking...",
+                        "session_id": session_id
+                    }
+                })
+                
+                # Process with chat agent
+                await run_chat_agent_with_websocket(websocket, session_id, user_id, message)
+                
+            except WebSocketDisconnect:
+                print(f"[WS CHAT] Client disconnected: {user_id}")
+                break
+            except Exception as e:
+                print(f"[WS CHAT] Error processing message: {e}")
+                await websocket.send_json({
+                    "type": "error",
+                    "timestamp": datetime.now().isoformat(),
+                    "data": {
+                        "message": f"Error processing your message: {str(e)}",
+                        "session_id": session_id
+                    }
+                })
+                
+    except WebSocketDisconnect:
+        print(f"[WS CHAT] WebSocket disconnected for user: {user_id}")
+        websocket_manager.disconnect(websocket, user_id)
+    except Exception as e:
+        print(f"[WS CHAT] WebSocket error for user {user_id}: {e}")
+        websocket_manager.disconnect(websocket, user_id)
+
+async def run_chat_agent_with_websocket(websocket: WebSocket, session_id: str, user_id: str, message: str):
+    """Run the chat agent with WebSocket streaming"""
+    print(f"[WS CHAT DEBUG] Starting chat agent for session {session_id}")
+    
+    try:
+        app_name = "financial_chat"
+        
+        # Create session
+        session = await session_service.create_session(
+            app_name=app_name,
+            user_id=user_id,
+            session_id=session_id,
+        )
+        
+        # Set chat message in session state
+        from google.adk.events import Event, EventActions
+        init_event = Event(
+            author="user",
+            invocation_id=f"chat_{session_id}",
+            content=Content(parts=[Part(text=message)]),
+            actions=EventActions(state_delta={
+                "user_message": message,
+                "user_id": user_id,
+                "session_id": session_id
+            })
+        )
+        await session_service.append_event(session, init_event)
+        
+        # Create runner
+        runner = Runner(
+            agent=chat_agent,
+            app_name=app_name,
+            session_service=session_service
+        )
+        
+        # Track if we've sent the final response
+        final_response_sent = False
+        
+        # Run chat agent and stream responses
+        for event in runner.run(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=Content(parts=[Part(text=message)])
+        ):
+            # Manually apply state_delta to session
+            if hasattr(event, 'actions') and event.actions and hasattr(event.actions, 'state_delta'):
+                state_delta = event.actions.state_delta
+                for key, value in state_delta.items():
+                    session.state[key] = value
+            
+            # Send intermediate updates for tool usage
+            if hasattr(event, 'actions') and event.actions and hasattr(event.actions, 'state_delta'):
+                state_delta = event.actions.state_delta
+                
+                # Check if agent is using tools
+                if "tool_calls" in state_delta:
+                    tool_calls = state_delta["tool_calls"]
+                    for tool_call in tool_calls:
+                        await websocket.send_json({
+                            "type": "tool_usage",
+                            "timestamp": datetime.now().isoformat(),
+                            "data": {
+                                "tool_name": tool_call.get("name", "Unknown"),
+                                "message": f"Using {tool_call.get('name', 'tool')}...",
+                                "session_id": session_id
+                            }
+                        })
+                
+                # Check if charts are being generated
+                if "charts" in state_delta:
+                    charts = state_delta["charts"]
+                    if charts:
+                        await websocket.send_json({
+                            "type": "chart_progress",
+                            "timestamp": datetime.now().isoformat(),
+                            "data": {
+                                "message": f"Generating {len(charts)} chart(s)...",
+                                "charts_count": len(charts),
+                                "session_id": session_id
+                            }
+                        })
+            
+            # Send final response
+            if event.is_final_response() and not final_response_sent:
+                final_response_sent = True
+                
+                # Extract final results
+                agent_response = session.state.get("agent_response", "I'm sorry, I couldn't process your request.")
+                charts = session.state.get("charts", [])
+                
+                # Send final chat response
+                await websocket.send_json({
+                    "type": "chat_response",
+                    "timestamp": datetime.now().isoformat(),
+                    "data": {
+                        "message": agent_response,
+                        "charts": charts,
+                        "session_id": session_id,
+                        "charts_count": len(charts)
+                    }
+                })
+                
+                print(f"[WS CHAT DEBUG] Sent final response with {len(charts)} charts")
+                break
+        
+    except Exception as e:
+        print(f"[WS CHAT ERROR] Chat agent error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        await websocket.send_json({
+            "type": "error",
+            "timestamp": datetime.now().isoformat(),
+            "data": {
+                "message": f"Sorry, I encountered an error: {str(e)}",
+                "session_id": session_id
+            }
+        })
 
 async def run_agent_pipeline_with_websocket(session_id: str, user_id: str, transaction_data: Dict[str, Any]):
     """Run the agent pipeline with WebSocket event publishing"""
@@ -343,3 +789,207 @@ async def run_agent_pipeline_with_websocket(session_id: str, user_id: str, trans
 @app.post("/")
 async def root():
     return {"message": "Transaction Analysis API", "version": "1.0.0"}
+
+
+# ============================================================================
+# DECISION ANALYSIS ENDPOINTS
+# ============================================================================
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize decision runner on startup"""
+    try:
+        initialize_runner(websocket_manager)
+        print("✅ Decision analysis runner initialized")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to initialize decision runner: {e}")
+
+
+@app.post("/api/decisions/analyze", response_model=DecisionAnalysisResponse)
+async def analyze_decision(request: DecisionAnalysisRequest):
+    """
+    Start decision analysis (returns immediately, results via WebSocket)
+    
+    Example request for car lease vs finance:
+    {
+      "user_id": "uuid",
+      "session_id": "uuid",  # optional, will be generated if not provided
+      "decision_type": "car_lease_vs_finance",
+      "decision_inputs": {
+        "lease_option": {
+          "monthly_payment": 389,
+          "down_payment": 2000,
+          "lease_term_months": 36,
+          "mileage_cap": 12000,
+          "acquisition_fee": 595,
+          "disposition_fee": 395,
+          "insurance_monthly": 120,
+          "fuel_monthly": 80,
+          "maintenance_monthly": 25
+        },
+        "finance_option": {
+          "purchase_price": 32000,
+          "down_payment": 3000,
+          "apr": 0.049,
+          "loan_term_months": 60,
+          "insurance_monthly": 140,
+          "fuel_monthly": 80,
+          "maintenance_monthly": 50
+        },
+        "tenure_months": 36
+      },
+      "preferences": {
+        "max_acceptable_payment": 500,
+        "risk_tolerance": "medium"
+      },
+      "constraints": {
+        "min_emergency_fund_months": 3
+      }
+    }
+    """
+    try:
+        # Generate session ID if not provided
+        session_id = request.session_id or str(uuid.uuid4())
+        print(f"[API] Starting decision analysis for user {request.user_id}, session {session_id}")
+        
+        # Create decision analysis record in database
+        print(f"[API] Creating decision analysis record...")
+        analysis_id = await create_decision_analysis(
+            user_id=request.user_id,
+            session_id=session_id,
+            decision_type=request.decision_type,
+            input_data={
+                "decision_inputs": request.decision_inputs,
+                "preferences": request.preferences,
+                "constraints": request.constraints
+            }
+        )
+        print(f"[API] Analysis record created with ID: {analysis_id}")
+        
+        # Start analysis in background with error handling
+        runner = get_runner()
+        print(f"[API] Got runner, creating background task...")
+        
+        async def run_with_error_handling():
+            try:
+                print(f"[API] Background task started for analysis {analysis_id}")
+                await runner.run_analysis(
+                    analysis_id=analysis_id,
+                    user_id=request.user_id,
+                    session_id=session_id,
+                    decision_type=request.decision_type,
+                    decision_inputs=request.decision_inputs,
+                    preferences=request.preferences,
+                    constraints=request.constraints
+                )
+                print(f"[API] Background task completed for analysis {analysis_id}")
+            except Exception as e:
+                print(f"[API ERROR] Background task failed: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        task = asyncio.create_task(run_with_error_handling())
+        print(f"[API] Background task created: {task}")
+        
+        return DecisionAnalysisResponse(
+            status="started",
+            session_id=session_id,
+            analysis_id=analysis_id,
+            message="Decision analysis started. Connect to WebSocket for real-time updates.",
+            websocket_url=f"ws://localhost:8000/ws/decisions/{session_id}"
+        )
+    
+    except Exception as e:
+        print(f"[API ERROR] Error starting decision analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+
+@app.get("/api/decisions/history/{user_id}")
+async def get_decision_history(user_id: str, limit: int = 10):
+    """Get user's past decision analyses"""
+    from decision_agent.tools.database import get_user_decision_history
+    
+    try:
+        history = await get_user_decision_history(user_id, limit)
+        return {"status": "success", "data": history}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/decisions/{analysis_id}")
+async def get_decision_analysis(analysis_id: str):
+    """Get specific decision analysis"""
+    from decision_agent.tools.database import get_decision_analysis
+    
+    try:
+        analysis = await get_decision_analysis(analysis_id)
+        if analysis:
+            return {"status": "success", "data": analysis}
+        else:
+            return {"status": "error", "message": "Analysis not found"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/decisions/{analysis_id}/apply-recommendation")
+async def apply_budget_recommendation(
+    analysis_id: str,
+    recommendation_id: str,
+    user_id: str
+):
+    """Apply a budget recommendation (create actual budget)"""
+    from decision_agent.tools.database import apply_recommendation
+    
+    try:
+        result = await apply_recommendation(recommendation_id, user_id)
+        return result
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ============================================================================
+# DECISION ANALYSIS WEBSOCKET
+# ============================================================================
+
+@app.websocket("/ws/decisions/{session_id}")
+async def decision_websocket_endpoint(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for real-time decision analysis updates
+    
+    Streams progress as the 7-agent pipeline executes.
+    """
+    print(f"[DECISION WS] Connection attempt for session: {session_id}")
+    
+    # Accept the WebSocket connection FIRST
+    await websocket.accept()
+    print(f"[DECISION WS] WebSocket accepted for session: {session_id}")
+    
+    # Register this session_id connection using the session-specific method
+    await websocket_manager.connect_session(websocket, session_id)
+    print(f"[DECISION WS] Session registered: {session_id}")
+    
+    try:
+        # Keep connection open and listen for any client messages
+        while True:
+            try:
+                # Accept any messages from client (like keepalive pings)
+                data = await websocket.receive_text()
+                print(f"[DECISION WS] Received message from client: {data}")
+                
+                # Echo back or handle specific commands if needed
+                if data == "ping":
+                    await websocket.send_json({"type": "pong"})
+                    
+            except WebSocketDisconnect:
+                print(f"[DECISION WS] Client disconnected: {session_id}")
+                break
+            except Exception as e:
+                print(f"[DECISION WS] Error: {e}")
+                break
+                
+    finally:
+        # Properly disconnect the session
+        print(f"[DECISION WS] Cleaning up session: {session_id}")
+        websocket_manager.disconnect_session(session_id)

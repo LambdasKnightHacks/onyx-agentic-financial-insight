@@ -1,10 +1,10 @@
-import { Card } from "@/src/components/ui/card"
-import { Badge } from "@/src/components/ui/badge"
-import { Button } from "@/src/components/ui/button"
-import { Switch } from "@/src/components/ui/switch"
-import { Progress } from "@/src/components/ui/progress"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Progress } from "@/components/ui/progress"
 import { DollarSign, Edit2, Trash2, TrendingUp, Calendar, Tag, AlertTriangle } from "lucide-react"
-import type { Budget } from "@/src/lib/types"
+import type { Budget } from "@/lib/types"
 import type { BudgetSpending } from "../types"
 
 interface BudgetCardProps {
@@ -114,14 +114,6 @@ export function BudgetCard({ budget, spending, onEdit, onDelete, onToggleActive 
               <>
                 <span>•</span>
                 <span>Rollover enabled</span>
-              </>
-            )}
-            {budget.created_at && (
-              <>
-                <span>•</span>
-                <span>
-                  Created {new Date(budget.created_at).toLocaleDateString()}
-                </span>
               </>
             )}
           </div>

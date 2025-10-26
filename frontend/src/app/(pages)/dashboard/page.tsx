@@ -1,24 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
-import { Button } from "@/src/components/ui/button";
-import { Skeleton } from "@/src/components/ui/skeleton";
-import {
-  Banknote,
-  TrendingUp,
-  TrendingDown,
-  ShieldAlert,
-  Lightbulb,
-  DollarSign,
-  ExternalLink,
-} from "lucide-react";
-import type { Account, Transaction } from "@/src/lib/types";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Banknote, TrendingUp, TrendingDown, ShieldAlert, Lightbulb, DollarSign, ExternalLink } from "lucide-react";
+import type { Account, Transaction } from "@/lib/types";
 import type { Alert } from "./alerts/types";
 import { getAlertTitle, getAlertIcon, getSeverityColor } from "./alerts/utils";
-import { PlaidLinkButton } from "@/src/components/plaid-link-button";
-import { useAuth } from "@/src/components/auth-context";
+import { PlaidLinkButton } from "@/components/plaid-link-button";
+import { useAuth } from "@/components/auth-context";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -30,38 +22,80 @@ export default function DashboardPage() {
   const [insights, setInsights] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [netWorthChange, setNetWorthChange] = useState<number>(0);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [
-          accountsRes,
-          transactionsRes,
-          alertsRes,
-          insightsRes,
-          budgetsRes,
-        ] = await Promise.all([
-          fetch("/api/accounts"),
-          fetch("/api/transactions?"),
-          fetch("/api/alerts?status=active"),
-          fetch("/api/insights?"),
-          fetch("/api/budgets?"),
-        ]);
+        const [accountsRes, transactionsRes, alertsRes, insightsRes, budgetsRes, allTransactionsRes] =
+          await Promise.all([
+            fetch("/api/accounts"),
+            fetch("/api/transactions?limit=3"),
+            fetch("/api/alerts?status=active&limit=3"),
+            fetch("/api/insights?"),
+            fetch("/api/budgets?"),
+            fetch("/api/transactions") // Fetch all transactions for net worth calculation
+          ]);
 
         const accountsData = await accountsRes.json();
         const transactionsData = await transactionsRes.json();
         const alertsData = await alertsRes.json();
         const insightsData = await insightsRes.json();
         const budgetsData = await budgetsRes.json();
+        const allTransactionsData = await allTransactionsRes.json();
 
         // Handle error responses
         setAccounts(Array.isArray(accountsData) ? accountsData : []);
         setRecentTransactions(
-          Array.isArray(transactionsData) ? transactionsData : []
+          Array.isArray(transactionsData) ? transactionsData.slice(0, 3) : []
         );
-        setAlerts(Array.isArray(alertsData) ? alertsData : []);
-        setInsights(Array.isArray(insightsData) ? insightsData : []);
-        setBudgets(Array.isArray(budgetsData) ? budgetsData : []);
+        setAlerts(Array.isArray(alertsData) ? alertsData.slice(0, 3) : []);
+        setInsights(
+          Array.isArray(insightsData) ? insightsData : []
+        );
+        setBudgets(
+          Array.isArray(budgetsData) ? budgetsData : []
+        );
+
+        // Calculate net worth change based on last 30 days of transactions
+        if (Array.isArray(allTransactionsData) && allTransactionsData.length > 0) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          // Filter transactions from last 30 days
+          const recentTxns = allTransactionsData.filter((txn: Transaction) => {
+            const txnDate = new Date(txn.date);
+            return txnDate >= thirtyDaysAgo;
+          });
+
+          // Calculate net change 
+          // Negative amounts are expenses, positive are income
+          const netChange = recentTxns.reduce((sum: number, txn: Transaction) => {
+            return sum - txn.amount; // Subtract because in Plaid, positive amounts are expenses
+          }, 0);
+
+          // Calculate current net worth
+          const currentNetWorth = Array.isArray(accountsData) 
+            ? accountsData.reduce((sum: number, acc: Account) => sum + acc.balanceCurrent, 0)
+            : 0;
+
+          // Calculate percentage change
+          // Previous net worth 
+          const previousNetWorth = currentNetWorth - netChange;
+          
+          // Calculate percentage
+          // Works for both positive and negative net worth
+          if (Math.abs(previousNetWorth) > 0.01) {
+            const percentChange = (netChange / Math.abs(previousNetWorth)) * 100;
+            setNetWorthChange(parseFloat(percentChange.toFixed(1)));
+          } else if (Math.abs(currentNetWorth) > 0.01 && netChange !== 0) {
+            // If previous net worth was near zero but current isn't, use current as base
+            const percentChange = (netChange / Math.abs(currentNetWorth)) * 100;
+            setNetWorthChange(parseFloat(percentChange.toFixed(1)));
+          } else {
+            setNetWorthChange(0);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
       } finally {
@@ -73,7 +107,6 @@ export default function DashboardPage() {
   }, []);
 
   const netWorth = accounts.reduce((sum, acc) => sum + acc.balanceCurrent, 0);
-  const netWorthChange = 8.4;
 
   if (loading) {
     return (
@@ -213,7 +246,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-2xl font-bold">
                       $
-                      {Math.abs(account.balanceCurrent).toLocaleString(
+                      {account.balanceCurrent.toLocaleString(
                         "en-US",
                         { minimumFractionDigits: 2 }
                       )}
@@ -257,8 +290,10 @@ export default function DashboardPage() {
                   <ShieldAlert className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold">Alerts</h3>
-                  <p className="text-2xl font-bold mt-1">{alerts.length}</p>
+                  <h3 className="font-semibold">Recent Alerts</h3>
+                  <p className="text-2xl font-bold mt-1">
+                    {alerts.length}
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     to review
                   </p>
@@ -328,12 +363,12 @@ export default function DashboardPage() {
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Alerts</h2>
+            <h2 className="text-xl font-semibold">Recent Alerts</h2>
             <Button variant="ghost" size="sm" asChild>
               <a href="/dashboard/alerts">View all</a>
             </Button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {alerts.length === 0 ? (
               <div className="text-center py-8">
                 <ShieldAlert className="h-12 w-12 text-green-600 mx-auto mb-3" />
@@ -344,34 +379,63 @@ export default function DashboardPage() {
               </div>
             ) : (
               alerts.map((alert) => {
-                const AlertIcon = getAlertIcon(alert.type);
-                const severityColors = getSeverityColor(alert.severity);
-                const title = getAlertTitle(alert);
-
+                const AlertIcon = getAlertIcon(alert.type)
+                const severityColors = getSeverityColor(alert.severity)
+                const title = getAlertTitle(alert)
+                const isBudgetAlert = alert.type === 'budget'
+                const isFraudAlert = alert.type === 'fraud'
+                const isCritical = alert.severity === 'critical' || alert.severity === 'high'
+                
                 return (
                   <div
                     key={alert.id}
-                    className="flex items-start gap-4 py-3 border-b last:border-0"
+                    className={`flex items-start gap-4 p-4 rounded-lg border transition-all hover:shadow-md ${
+                      isFraudAlert && isCritical
+                        ? 'bg-red-500/10 border-red-500/30 border-l-4'
+                        : isFraudAlert
+                        ? 'bg-orange-500/10 border-orange-500/30 border-l-4'
+                        : 'border-border'
+                    }`}
                   >
-                    <div className={`p-2 rounded-lg ${severityColors.bg}`}>
-                      <AlertIcon className={`h-4 w-4 ${severityColors.text}`} />
+                    <div className={`flex-shrink-0 relative ${
+                      isFraudAlert && isCritical ? 'animate-pulse' : ''
+                    }`}>
+                      <div className={`p-3 rounded-xl shadow-lg ${
+                        isFraudAlert 
+                          ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                          : isBudgetAlert
+                          ? 'bg-gradient-to-br from-amber-500 to-orange-500'
+                          : severityColors.bg
+                      }`}>
+                        <AlertIcon className="h-5 w-5 text-white" />
+                      </div>
+                      {isCritical && (
+                        <div className="absolute -top-1 -right-1 h-3 w-3 bg-red-600 rounded-full border-2 border-background animate-ping" />
+                      )}
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="font-medium">{title}</div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-base text-foreground truncate">
+                          {title}
+                        </h3>
+                        <Badge
+                          variant={isCritical ? "destructive" : "secondary"}
+                          className={`text-xs capitalize font-semibold ${
+                            isCritical ? 'animate-pulse' : ''
+                          }`}
+                        >
+                          {alert.severity}
+                        </Badge>
+                      </div>
                       <div className="text-sm text-muted-foreground">
-                        {alert.type === "budget"
-                          ? alert.reason?.split(":")[0] || "Budget alert"
-                          : alert.amount
-                          ? `$${Math.abs(alert.amount).toFixed(2)}`
-                          : alert.date}
+                        {isBudgetAlert 
+                          ? alert.reason?.split(':')[0] || 'Budget alert'
+                          : alert.amount !== undefined
+                            ? `$${Math.abs(alert.amount).toFixed(2)}`
+                            : alert.date
+                        }
                       </div>
                     </div>
-                    <Badge
-                      variant={severityColors.badge}
-                      className="text-xs capitalize"
-                    >
-                      {alert.severity}
-                    </Badge>
                   </div>
                 );
               })

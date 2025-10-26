@@ -4,7 +4,7 @@ import { Effects } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Particles } from "./particles";
 import { VignetteShader } from "./shaders/vignetteShader";
-import { cn } from "@/src/lib/utils";
+import { cn } from "@/lib/utils";
 
 export const GL = ({
   hovering,

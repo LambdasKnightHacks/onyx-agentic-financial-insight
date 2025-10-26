@@ -1,7 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import { ArrowUpRight, ArrowDownRight, CreditCard, AlertTriangle } from "lucide-react";
-import type { Transaction, Account } from "@/src/lib/types";
+import type { Transaction, Account } from "@/lib/types";
 
 interface TransactionListProps {
   groupedTransactions: Record<string, Transaction[]>;
@@ -9,19 +11,44 @@ interface TransactionListProps {
   onTransactionClick: (transaction: Transaction) => void;
 }
 
+const TRANSACTIONS_PER_PAGE = 5;
+
 export function TransactionList({
   groupedTransactions,
   accounts,
   onTransactionClick,
 }: TransactionListProps) {
+  // Track pagination state for each account
+  const [accountPages, setAccountPages] = useState<Record<string, number>>({});
+
   const getAccountById = (accountId: string) => {
     return accounts.find((acc) => acc.id === accountId);
+  };
+
+  const getCurrentPage = (accountId: string) => {
+    return accountPages[accountId] || 1;
+  };
+
+  const setCurrentPage = (accountId: string, page: number) => {
+    setAccountPages((prev) => ({ ...prev, [accountId]: page }));
+  };
+
+  const getPaginatedTransactions = (
+    transactions: Transaction[],
+    accountId: string
+  ) => {
+    const currentPage = getCurrentPage(accountId);
+    const startIndex = (currentPage - 1) * TRANSACTIONS_PER_PAGE;
+    const endIndex = startIndex + TRANSACTIONS_PER_PAGE;
+    return transactions.slice(startIndex, endIndex);
   };
 
   return (
     <div className="space-y-6">
       {Object.entries(groupedTransactions).map(([accountId, txns]) => {
         const account = getAccountById(accountId);
+        const currentPage = getCurrentPage(accountId);
+        const paginatedTxns = getPaginatedTransactions(txns, accountId);
 
         return (
           <Card key={accountId}>
@@ -46,7 +73,7 @@ export function TransactionList({
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {txns.map((txn) => (
+                {paginatedTxns.map((txn) => (
                   <button
                     key={txn.id}
                     onClick={() => onTransactionClick(txn)}
@@ -96,6 +123,15 @@ export function TransactionList({
                   </button>
                 ))}
               </div>
+
+              {/* Pagination*/}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={txns.length}
+                itemsPerPage={TRANSACTIONS_PER_PAGE}
+                onPageChange={(page) => setCurrentPage(accountId, page)}
+                itemLabel="transactions"
+              />
             </CardContent>
           </Card>
         );

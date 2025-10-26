@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { createClient } from '@/src/utils/supabase/client'
+import { createClient } from '@/utils/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -44,7 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
+      // Revoke tokens globally to invalidate refresh token
+      await supabase.auth.signOut({ scope: 'global' })
     } catch (error) {
       console.error('Error signing out:', error)
     }

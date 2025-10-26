@@ -128,8 +128,9 @@ class PlaidService {
         .eq("user_id", userId)
         .eq("status", "active");
 
+      // itemId is the database UUID (plaid_items.id), not the Plaid item_id
       if (itemId) {
-        query = query.eq("item_id", itemId);
+        query = query.eq("id", itemId);
       }
 
       const { data, error } = await query.single();
@@ -217,11 +218,26 @@ class PlaidService {
     accessToken: string,
     cursor: string | null
   ): Promise<any> {
-    const request: any = {
-      access_token: accessToken,
-      cursor: cursor,
-    };
-    return await this.client.transactionsSync(request);
+    try {
+      const request: any = {
+        access_token: accessToken,
+        cursor: cursor,
+      };
+      console.log(
+        `[Plaid Service] Fetching transactions with cursor: ${cursor || "null"}`
+      );
+      const response = await this.client.transactionsSync(request);
+      console.log(
+        `[Plaid Service] Received ${response.data.added.length} added, ${response.data.modified.length} modified, ${response.data.removed.length} removed transactions`
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        "[Plaid Service] Error fetching transactions:",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
   }
 
   async saveAccounts(
@@ -230,6 +246,9 @@ class PlaidService {
     accounts: any[]
   ): Promise<PlaidAccount[]> {
     try {
+      console.log(
+        `[Plaid Service] Saving ${accounts.length} accounts for user ${userId}`
+      );
       const savedAccounts: PlaidAccount[] = [];
 
       for (const account of accounts) {
@@ -238,7 +257,6 @@ class PlaidService {
           user_id: userId,
           name: account.name,
           type: account.type,
-          subtype: account.subtype,
           currency: account.balances.iso_currency_code || "USD",
           display_mask: account.mask,
           institution: account.official_name || account.name,
@@ -246,6 +264,15 @@ class PlaidService {
           plaid_item_id: itemId,
           source: "plaid" as const,
         };
+
+        // Add subtype if available (column must exist in database)
+        if (account.subtype) {
+          accountData.subtype = account.subtype;
+        }
+
+        console.log(
+          `[Plaid Service] Saving account: ${account.name} (${account.account_id})`
+        );
 
         const { data, error } = await supabase
           .from("accounts")
@@ -256,15 +283,21 @@ class PlaidService {
           .single();
 
         if (error) {
-          console.error("Error saving account:", error);
+          console.error(`[Plaid Service] Error saving account:`, error);
         } else if (data) {
+          console.log(
+            `[Plaid Service] ✓ Account saved successfully: ${data.name} (DB ID: ${data.id})`
+          );
           savedAccounts.push(data as PlaidAccount);
         }
       }
 
+      console.log(
+        `[Plaid Service] Successfully saved ${savedAccounts.length}/${accounts.length} accounts`
+      );
       return savedAccounts;
     } catch (error) {
-      console.error("Error saving accounts:", error);
+      console.error("[Plaid Service] Error saving accounts:", error);
       throw error;
     }
   }

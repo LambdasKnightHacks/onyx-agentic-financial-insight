@@ -1,71 +1,118 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/src/lib/supabase"
-import { transformSupabaseTransactionToTransaction } from "@/src/types/database-types"
-import { getUserIdFromRequest } from "@/src/lib/auth-utils"
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import { transformSupabaseTransactionToTransaction } from "@/types/database-types";
+import { getUserIdFromRequest } from "@/lib/auth-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const accountId = searchParams.get("accountId")
-    const suspicious = searchParams.get("suspicious")
+    const { searchParams } = new URL(request.url);
+    const accountId = searchParams.get("accountId");
+    const suspicious = searchParams.get("suspicious");
+    const limit = searchParams.get("limit");
 
-    const userId = await getUserIdFromRequest(request)
-    
+    console.log("[Transactions API] GET request received");
+    console.log("[Transactions API] Query params:", {
+      accountId,
+      suspicious,
+      limit,
+    });
+
+    const userId = await getUserIdFromRequest(request);
+
+    console.log("[Transactions API] User ID from request:", userId);
+
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.log("[Transactions API] No user ID - returning 401");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let query = supabaseAdmin
-      .from('transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('posted_at', { ascending: false })
+      .from("transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("posted_at", { ascending: false });
+
+    console.log("[Transactions API] Building query for user:", userId);
 
     if (accountId) {
-      query = query.eq('account_id', accountId)
+      query = query.eq("account_id", accountId);
     }
 
     if (suspicious === "true") {
-      query = query.gt('fraud_score', 0.5)
+      query = query.gt("fraud_score", 0.5);
     }
 
-    const { data: transactions, error } = await query
+    if (limit) {
+      query = query.limit(parseInt(limit));
+    }
+
+    console.log("[Transactions API] Executing query...");
+    const { data: transactions, error } = await query;
+
+    console.log("[Transactions API] Query executed");
+    console.log("[Transactions API] Error:", error);
+    console.log("[Transactions API] Raw data:", transactions);
 
     if (error) {
-      console.error('Error fetching transactions:', error)
-      return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 })
+      console.error("[Transactions API] Error fetching transactions:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch transactions" },
+        { status: 500 }
+      );
     }
 
-    const transactionsArray = Array.isArray(transactions) ? transactions : []
-    const transformedTransactions = transactionsArray.map(transformSupabaseTransactionToTransaction)
+    const transactionsArray = Array.isArray(transactions) ? transactions : [];
+    console.log(
+      `[Transactions API] Found ${transactionsArray.length} transactions for user ${userId}`
+    );
 
-    return NextResponse.json(transformedTransactions)
+    if (transactionsArray.length > 0) {
+      console.log(
+        "[Transactions API] First transaction sample:",
+        transactionsArray[0]
+      );
+    }
+
+    const transformedTransactions = transactionsArray.map(
+      transformSupabaseTransactionToTransaction
+    );
+
+    console.log(
+      "[Transactions API] Transformed transactions:",
+      transformedTransactions.length
+    );
+    console.log("[Transactions API] Returning response");
+
+    return NextResponse.json(transformedTransactions);
   } catch (error) {
-    console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error("Unexpected error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request)
-    
+    const userId = await getUserIdFromRequest(request);
+
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json()
+    const body = await request.json();
 
     // Validate required fields
     if (!body.amount || !body.posted_at) {
       return NextResponse.json(
-        { error: 'Missing required fields: amount and posted_at are required' },
+        { error: "Missing required fields: amount and posted_at are required" },
         { status: 400 }
-      )
+      );
     }
 
     // Database constraint currently only accepts 'plaid' as source
-    const source = 'plaid'
+    const source = "plaid";
 
     // expected transaction data
     const transactionData = {
@@ -76,7 +123,7 @@ export async function POST(request: NextRequest) {
       posted_at: body.posted_at,
       authorized_date: body.authorized_date || null,
       amount: body.amount,
-      currency: body.currency || 'USD',
+      currency: body.currency || "USD",
       merchant_name: body.merchant_name || null,
       merchant: body.merchant || body.merchant_name || null,
       description: body.description || body.merchant_name || null,
@@ -84,7 +131,7 @@ export async function POST(request: NextRequest) {
       subcategory: body.subcategory || null,
       pending: body.pending ?? false,
       payment_channel: body.payment_channel || null,
-      status: 'processed', // Try 'processed' instead of 'posted'
+      status: body.pending ? "pending" : "posted", // Use 'posted' or 'pending' to match database constraint
       location_city: body.location_city || null,
       location_state: body.location_state || null,
       geo_lat: body.geo_lat || null,
@@ -96,28 +143,38 @@ export async function POST(request: NextRequest) {
       raw: body.raw || null,
       hash: body.hash || null,
       ingested_at: new Date().toISOString(),
-    }
+    };
 
-    console.log('Creating transaction:', transactionData.merchant_name, transactionData.amount)
+    // Debug: Print the full payload being sent to database
+    console.log("=== TRANSACTION API PAYLOAD DEBUG ===");
+    console.log("Full transaction data being sent to database:");
+    console.log(JSON.stringify(transactionData, null, 2));
+    console.log("=== END API PAYLOAD DEBUG ===");
+
+    console.log(
+      "Creating transaction:",
+      transactionData.merchant_name,
+      transactionData.amount
+    );
 
     // Insert transaction into database
     const { data: transaction, error } = await supabaseAdmin
-      .from('transactions')
+      .from("transactions")
       .insert(transactionData)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.error('Error creating transaction:', error)
+      console.error("Error creating transaction:", error);
       return NextResponse.json(
-        { 
-          error: 'Failed to create transaction', 
+        {
+          error: "Failed to create transaction",
           details: error.message,
           hint: error.hint,
-          code: error.code
+          code: error.code,
         },
         { status: 500 }
-      )
+      );
     }
 
     // Update account balance if account_id is provided
@@ -125,49 +182,63 @@ export async function POST(request: NextRequest) {
       try {
         // Get the latest balance for this account
         const { data: latestBalance, error: balanceError } = await supabaseAdmin
-          .from('account_balances')
-          .select('current, available')
-          .eq('account_id', transactionData.account_id)
-          .order('as_of', { ascending: false })
+          .from("account_balances")
+          .select("current, available")
+          .eq("account_id", transactionData.account_id)
+          .order("as_of", { ascending: false })
           .limit(1)
-          .single()
+          .single();
 
         if (!balanceError && latestBalance) {
-          // Calculate new balances - subtract absolute value for debits
+          // Calculate new balances
           const newCurrent = (latestBalance.current || 0) - Math.abs(transactionData.amount)
           const newAvailable = (latestBalance.available || 0) - Math.abs(transactionData.amount)
 
           // Insert new balance record
-          await supabaseAdmin
-            .from('account_balances')
-            .insert({
-              account_id: transactionData.account_id,
-              as_of: new Date().toISOString(),
-              current: newCurrent,
-              available: newAvailable,
-              currency: transactionData.currency || 'USD',
-              source: 'manual'
-            })
-          
-          console.log(`Updated balance for account ${transactionData.account_id}`)
+          await supabaseAdmin.from("account_balances").insert({
+            account_id: transactionData.account_id,
+            as_of: new Date().toISOString(),
+            current: newCurrent,
+            available: newAvailable,
+            currency: transactionData.currency || "USD",
+            source: "manual",
+          });
+
+          console.log(
+            `Updated balance for account ${transactionData.account_id}`
+          );
         }
       } catch (balanceUpdateError) {
-        console.error('Error updating account balance:', balanceUpdateError)
+        console.error("Error updating account balance:", balanceUpdateError);
         // Don't fail the transaction if balance update fails
       }
     }
 
-    console.log('Transaction created successfully:', transaction.id)
+    console.log("Transaction created successfully:", transaction.id);
+
+    // Check budgets for exceeded alerts
+    // Trigger budget check in the background without blocking the response
+    const budgetCheckUrl = new URL('/api/alerts/check-budgets', request.url).toString();
+    fetch(budgetCheckUrl, {
+      method: 'POST',
+      headers: {
+        'Cookie': request.headers.get('Cookie') || '',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    }).catch(err => {
+      console.error('Error checking budgets:', err);
+    });
 
     // Transform and return the created transaction
-    const transformedTransaction = transformSupabaseTransactionToTransaction(transaction)
-    return NextResponse.json(transformedTransaction, { status: 201 })
+    const transformedTransaction =
+      transformSupabaseTransactionToTransaction(transaction);
+    return NextResponse.json(transformedTransaction, { status: 201 });
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error("Unexpected error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
-    )
+    );
   }
 }
-

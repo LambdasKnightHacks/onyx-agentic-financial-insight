@@ -114,8 +114,10 @@ class BudgetAgent(BaseAgent):
                     result_dict["tips"] = []
                 
                 # Step 6: A2A Communication - Scenario Planning
-                if result_dict.get("over_budget"):
-                    budget_excess = result_dict.get("budget_percentage", 0) - 100
+                # Trigger on budget concerns, not just over budget
+                budget_percentage = result_dict.get("budget_percentage", 0)
+                if result_dict.get("over_budget") or (budget_percentage > 80):
+                    budget_excess = max(budget_percentage - 100, budget_percentage - 80)
                     if budget_excess > 0:
                         scenario_request = {
                             "type": "spending_reduction_scenario",

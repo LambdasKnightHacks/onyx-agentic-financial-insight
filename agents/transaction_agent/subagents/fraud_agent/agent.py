@@ -148,8 +148,9 @@ class FraudAgent(BaseAgent):
                 
                 # Step 6: A2A Communication - Merchant Verification
                 fraud_score = result_dict.get("fraud_score", 0.0)
-                if fraud_score > 0.7 and merchant_name.lower() not in ["starbucks", "mcdonalds", "amazon", "shell"]:
-                    # High fraud score with unknown merchant - request verification
+                # Lower threshold from 0.7 to 0.5 to increase A2A usage
+                if fraud_score > 0.5 and merchant_name.lower() not in ["starbucks", "mcdonalds", "amazon", "shell"]:
+                    # Moderate fraud score with unknown merchant - request verification
                     verification_request = {
                         "type": "merchant_verification",
                         "merchant": merchant_name,
