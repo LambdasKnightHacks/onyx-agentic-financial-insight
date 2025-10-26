@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, ArrowLeftRight, Lightbulb, ShieldAlert, Zap, Settings } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Lightbulb, ShieldAlert, Zap, Settings, BarChart3 } from "lucide-react"
 import { cn } from "@/src/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/graphs", label: "Graphs", icon: BarChart3 },
   { href: "/dashboard/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/dashboard/insights", label: "Insights", icon: Lightbulb },
   { href: "/dashboard/alerts", label: "Alerts", icon: ShieldAlert },
