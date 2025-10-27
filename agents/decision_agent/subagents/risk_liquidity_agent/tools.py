@@ -255,7 +255,7 @@ def calculate_liquidity_score(
     
     # Factor 1: Emergency fund score (0-1)
     ef_months = new_balance / new_monthly_expenses if new_monthly_expenses > 0 else 12
-    ef_score = min(1.0, ef_months / DECISION_THRESHOLDS["optimal_emergency_fund_months"])
+    ef_score = max(0.0, min(1.0, ef_months / DECISION_THRESHOLDS["optimal_emergency_fund_months"]))
     
     # Factor 2: Payment-to-income ratio score (0-1)
     pti_ratio = new_monthly_expenses / monthly_income if monthly_income > 0 else 1.0

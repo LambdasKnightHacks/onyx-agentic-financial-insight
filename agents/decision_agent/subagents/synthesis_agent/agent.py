@@ -248,18 +248,28 @@ class SynthesisAgent(BaseAgent):
     
     def _build_comparison_matrix(self, tco_results: List[Dict], risk_analysis: List[Dict]) -> Dict[str, Any]:
         """Build comparison matrix"""
+        # Safety check for empty lists
+        if not tco_results:
+            return {
+                "winner_by_tco": "Unknown",
+                "winner_by_liquidity": "Unknown",
+                "winner_by_flexibility": "Unknown",
+                "tco_difference": 0,
+                "tco_difference_pct": 0
+            }
+        
         # Find winners by different metrics
         winner_by_tco = min(tco_results, key=lambda x: x.get("tco_expected", float('inf')))
-        winner_by_liquidity = max(risk_analysis, key=lambda x: x.get("liquidity_score", 0))
+        winner_by_liquidity = max(risk_analysis, key=lambda x: x.get("liquidity_score", 0)) if risk_analysis else {}
         
         tco_values = [opt.get("tco_expected", 0) for opt in tco_results]
-        tco_difference = max(tco_values) - min(tco_values)
-        tco_difference_pct = (tco_difference / max(tco_values) * 100) if max(tco_values) > 0 else 0
+        tco_difference = max(tco_values) - min(tco_values) if len(tco_values) > 1 else 0
+        tco_difference_pct = (tco_difference / max(tco_values) * 100) if tco_values and max(tco_values) > 0 else 0
         
         return {
             "winner_by_tco": winner_by_tco.get("name", "Unknown"),
             "winner_by_liquidity": winner_by_liquidity.get("option_name", "Unknown"),
-            "winner_by_flexibility": tco_results[-1].get("name", "Unknown"),  # Placeholder
+            "winner_by_flexibility": tco_results[-1].get("name", "Unknown") if tco_results else "Unknown",
             "tco_difference": round(tco_difference, 2),
             "tco_difference_pct": round(tco_difference_pct, 1)
         }

@@ -191,8 +191,9 @@ export async function POST(request: NextRequest) {
 
         if (!balanceError && latestBalance) {
           // Calculate new balances
-          const newCurrent = (latestBalance.current || 0) - Math.abs(transactionData.amount)
-          const newAvailable = (latestBalance.available || 0) - Math.abs(transactionData.amount)
+         const delta = Number(transactionData.amount || 0);
+         const newCurrent   = (latestBalance?.current   ?? 0) + delta;
+         const newAvailable = (latestBalance?.available ?? 0) + delta;
 
           // Insert new balance record
           await supabaseAdmin.from("account_balances").insert({
